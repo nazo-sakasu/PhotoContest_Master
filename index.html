@@ -72,7 +72,7 @@ html,body{
   overflow-x:hidden;
 }
 body{
-  background:var(--sand);color:var(--ink);
+  background:var(--sea);color:var(--ink);
   font-family:'Noto Sans JP',sans-serif;font-weight:500;
   -webkit-font-smoothing:antialiased;font-feature-settings:"palt";
   letter-spacing:0.02em;
@@ -662,6 +662,10 @@ const state = {
   event: null,
   userId: localStorage.getItem('pc_user_' + EVENT_ID) || ('u_' + Math.random().toString(36).slice(2, 14)),
   nickname: localStorage.getItem('pc_nick_' + EVENT_ID) || '',
+  identifiers: (() => {
+    try { return JSON.parse(localStorage.getItem('pc_ids_' + EVENT_ID) || '{}'); }
+    catch { return {}; }
+  })(),
   uploadedCount: 0,
   selectedFile: null,
   selectedDataUrl: null,
@@ -669,6 +673,7 @@ const state = {
   likes: new Set(),
   myLikes: new Set(),
   comments: [],
+  rankings: [],
   currentPhotoId: null,
   detailPhoto: null,
   uploading: false,
@@ -947,7 +952,14 @@ async function submitNameForm() {
   state.nickname = nickname;
   state.identifiers = identifiers;
   localStorage.setItem('pc_nick_' + EVENT_ID, nickname);
-  // 識別情報はlocalStorageには保存しない（投稿時に毎回再利用するためメモリのみ）
+  // 識別情報もlocalStorageに保存（リロード後の投稿時に再入力させないため）
+  // ※ photo_identifiersテーブルへの保存はサーバー側で行われるため、
+  //    ここで一時保存するのは利便性のためのみ
+  try {
+    localStorage.setItem('pc_ids_' + EVENT_ID, JSON.stringify(identifiers));
+  } catch (e) { console.warn('localStorage保存失敗:', e); }
+
+  console.log('[USER SAVED]', { nickname, identifiers });
 
   $('#nameModal').classList.add('hidden');
   onUserReady();
@@ -966,7 +978,15 @@ function applyEventSettings() {
   // 背景テーマ反映
   const allowed = ['aquarium','family','corporate','spring','night','premium','natural','festival'];
   const t = state.event.theme_preset;
-  document.body.dataset.theme = allowed.includes(t) ? t : 'aquarium';
+  const themeFinal = allowed.includes(t) ? t : 'aquarium';
+  document.body.dataset.theme = themeFinal;
+  // html要素にも適用（CSS変数の継承を確実にするため）
+  document.documentElement.dataset.theme = themeFinal;
+
+  console.log('[THEME APPLY]', {
+    theme_preset: state.event?.theme_preset,
+    bodyTheme: document.body.dataset.theme,
+  });
 }
 
 // ============================================================
@@ -1085,6 +1105,29 @@ $('#submitBtn').addEventListener('click', async () => {
     // Storageにアップロード
     const { path, url } = await DB.uploadImage(EVENT_ID, compressed);
 
+    // identifiers をlocalStorageから復元（メモリ上state.identifiersが空の場合の保険）
+    let identifiers = state.identifiers || {};
+    if (!identifiers || Object.keys(identifiers).length === 0) {
+      try {
+        const saved = localStorage.getItem('pc_ids_' + EVENT_ID);
+        if (saved) {
+          identifiers = JSON.parse(saved) || {};
+          state.identifiers = identifiers;  // メモリにも復元
+        }
+      } catch {}
+    }
+
+    // ここで必須項目を再チェック（イベント設定変更時の保険）
+    const ev = state.event;
+    if (ev.enable_registration_number && !identifiers.registration_number) {
+      throw new Error('REOPEN_NAME_MODAL');
+    }
+    if (ev.require_phone && !identifiers.phone) throw new Error('REOPEN_NAME_MODAL');
+    if (ev.require_employee_id && !identifiers.employee_id) throw new Error('REOPEN_NAME_MODAL');
+    if (ev.require_email && !identifiers.email) throw new Error('REOPEN_NAME_MODAL');
+
+    console.log('[SUBMIT IDENTIFIERS]', identifiers);
+
     // RPC呼び出し
     let photoId;
     try {
@@ -1094,7 +1137,7 @@ $('#submitBtn').addEventListener('click', async () => {
         nickname: state.nickname,
         imageUrl: url,
         storagePath: path,
-        identifiers: state.identifiers || {},
+        identifiers: identifiers,
       });
     } catch (rpcErr) {
       // DB登録失敗時、Storageの孤児画像はクライアントから削除できないため
@@ -1116,7 +1159,16 @@ $('#submitBtn').addEventListener('click', async () => {
     await loadPhotos();
   } catch (err) {
     console.error(err);
-    showToast(errMsg(err), true);
+    if ((err.message || '') === 'REOPEN_NAME_MODAL') {
+      showToast('参加情報の入力が必要です', true);
+      // localStorageの保存値だけクリアして再入力させる
+      localStorage.removeItem('pc_ids_' + EVENT_ID);
+      state.identifiers = {};
+      $('#nameModal').classList.remove('hidden');
+      setupNameModal();
+    } else {
+      showToast(errMsg(err), true);
+    }
   } finally {
     state.uploading = false;
     btn.textContent = 'この写真を投稿する';
@@ -1173,7 +1225,9 @@ function renderGallery() {
 function isResultsPublic() {
   const ev = state.event;
   if (!ev) return false;
-  const mode = ev.result_publish_mode || 'realtime';
+  const mode = ev.result_publish_mode;
+  // 古いイベント・未設定イベントの救済（true扱い）
+  if (!mode) return true;
   if (mode === 'realtime') return true;
   if (mode === 'manual') return ev.results_published === true;
   if (mode === 'scheduled') {
@@ -1187,18 +1241,29 @@ function renderResult() {
   const list = $('#resultList');
   const empty = $('#resultEmpty');
 
+  console.log('[RESULT CHECK]', {
+    event: state.event,
+    result_publish_mode: state.event?.result_publish_mode,
+    results_published: state.event?.results_published,
+    results_publish_at: state.event?.results_publish_at,
+    canShowResults: isResultsPublic(),
+    photos_count: state.photos?.length || 0,
+  });
+
   // 結果公開モード判定
   if (!isResultsPublic()) {
     list.innerHTML = '';
     empty.style.display = 'block';
-    empty.querySelector('div:last-child').textContent = '結果発表をお待ちください';
+    const lastDiv = empty.querySelector('div:last-child');
+    if (lastDiv) lastDiv.textContent = '結果発表をお待ちください';
     return;
   }
 
   if (!state.photos || state.photos.length === 0) {
     list.innerHTML = '';
     empty.style.display = 'block';
-    empty.querySelector('div:last-child').textContent = 'まだ写真がありません';
+    const lastDiv = empty.querySelector('div:last-child');
+    if (lastDiv) lastDiv.textContent = 'まだ投稿がありません';
     return;
   }
   empty.style.display = 'none';
@@ -1206,9 +1271,10 @@ function renderResult() {
   const showAuthor = state.event.show_author_name !== false;
 
   // 主催者賞（award_title が設定されている写真）
-  const awarded = state.photos.filter(p => p.award_title && p.status === 'visible');
+  // public_photos_view は status='active' のみ返すため、追加statusチェックは不要
+  const awarded = state.photos.filter(p => p.award_title);
   // ランキング
-  const sorted = [...state.photos].filter(p => p.status === 'visible').sort((a, b) => (b.like_count || 0) - (a.like_count || 0));
+  const sorted = [...state.photos].sort((a, b) => (b.like_count || 0) - (a.like_count || 0));
   const top5 = sorted.slice(0, 5);
 
   let html = '';
@@ -1241,6 +1307,15 @@ function renderResult() {
         ${showAuthor ? `<div class="result__award-name">${escapeHtml(p.nickname)}</div>` : ''}
       </div>
     `).join('');
+  }
+
+  // 念のため空にならないよう保険
+  if (!html) {
+    list.innerHTML = '';
+    empty.style.display = 'block';
+    const lastDiv = empty.querySelector('div:last-child');
+    if (lastDiv) lastDiv.textContent = 'まだ投稿がありません';
+    return;
   }
 
   list.innerHTML = html;
