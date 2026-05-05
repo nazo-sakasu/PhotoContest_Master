@@ -1,0 +1,1053 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>フォトコンテスト</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;700;800&family=Noto+Sans+JP:wght@400;500;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="db.js"></script>
+<style>
+:root{
+  --sea:#0a3d52;--sea-2:#14587a;--sand:#f5ede0;--sand-2:#ede2cd;
+  --foam:#faf6ec;--ink:#15171c;--ink-2:#2c4250;--ink-3:#6c7d8a;
+  --coral:#d65a3a;--coral-soft:#e87a5d;--gold:#c8951f;
+  --line:rgba(21,23,28,0.1);
+  --r:14px;--r-lg:20px;
+  --shadow-md:0 4px 12px rgba(10,31,42,0.1);
+}
+
+/* テーマプリセット：body[data-theme] で切替 */
+body[data-theme="aquarium"]{
+  --sea:#0a3d52;--sea-2:#14587a;
+  --sand:#f5ede0;--sand-2:#ede2cd;--foam:#faf6ec;
+  --coral:#d65a3a;--coral-soft:#e87a5d;
+}
+body[data-theme="family"]{
+  --sea:#8a4b2a;--sea-2:#b86b3f;
+  --sand:#fff1df;--sand-2:#f7dcc2;--foam:#fffaf2;
+  --coral:#e56b4f;--coral-soft:#ef8b73;
+}
+body[data-theme="corporate"]{
+  --sea:#1f2937;--sea-2:#374151;
+  --sand:#f3f4f6;--sand-2:#e5e7eb;--foam:#ffffff;
+  --coral:#2563eb;--coral-soft:#3b82f6;
+}
+body[data-theme="spring"]{
+  --sea:#3f7d5c;--sea-2:#75a878;
+  --sand:#fff7e8;--sand-2:#f4e5c2;--foam:#fffdf5;
+  --coral:#e7837a;--coral-soft:#ee9b94;
+}
+body[data-theme="night"]{
+  --sea:#121826;--sea-2:#243047;
+  --sand:#e9e6df;--sand-2:#d8d2c6;--foam:#f8f5ee;
+  --coral:#c8951f;--coral-soft:#d9aa42;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  background:var(--sand);color:var(--ink);
+  font-family:'Noto Sans JP',sans-serif;font-weight:500;
+  -webkit-font-smoothing:antialiased;font-feature-settings:"palt";
+  letter-spacing:0.02em;
+  overflow:hidden;
+}
+.frame{
+  position:relative;width:100%;height:100dvh;max-width:480px;
+  margin:0 auto;background:var(--sand);overflow:hidden;
+  display:flex;flex-direction:column;
+}
+
+/* ヘッダー */
+.header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 18px;border-bottom:1px solid var(--line);background:var(--sand);
+}
+.header__title{font-weight:800;font-size:15px;letter-spacing:0.04em}
+.header__title small{display:block;font-size:10px;color:var(--ink-3);font-weight:600;letter-spacing:0.1em;margin-top:2px}
+.header__name{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:6px 12px;background:var(--foam);border-radius:100px;
+  font-size:12px;font-weight:700;color:var(--ink-2);
+}
+.header__name::before{content:'';width:6px;height:6px;background:var(--coral);border-radius:50%}
+
+/* タブ */
+.tabs{display:flex;padding:8px 12px;gap:6px;background:var(--sand);border-bottom:1px solid var(--line)}
+.tab{
+  flex:1;padding:10px;border:none;background:transparent;
+  font-family:inherit;font-size:13px;font-weight:700;color:var(--ink-3);
+  cursor:pointer;border-radius:var(--r);transition:all 0.2s;
+}
+.tab.active{background:var(--ink);color:var(--foam)}
+
+/* ビュー */
+.views{flex:1;position:relative;overflow:hidden}
+.view{
+  position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;
+  -webkit-overflow-scrolling:touch;opacity:0;pointer-events:none;
+  transition:opacity 0.2s;
+  padding:18px 18px 80px;
+}
+.view.active{opacity:1;pointer-events:auto}
+
+/* 投稿エリア */
+.upload__hero{
+  background:linear-gradient(135deg,var(--sea),var(--sea-2));
+  color:var(--foam);border-radius:var(--r-lg);
+  padding:22px;margin-bottom:14px;position:relative;overflow:hidden;
+}
+.upload__title{font-size:20px;font-weight:800;line-height:1.4;margin-bottom:8px}
+.upload__sub{font-size:12px;line-height:1.7;opacity:0.85}
+
+.uploader{
+  background:var(--sand-2);border-radius:var(--r-lg);
+  padding:32px 16px;text-align:center;cursor:pointer;
+  transition:background 0.2s;margin-bottom:14px;
+}
+.uploader:active{background:var(--coral-soft)}
+.uploader__icon{
+  width:50px;height:50px;margin:0 auto 10px;background:var(--foam);
+  border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;
+}
+.uploader__text{font-weight:700;font-size:14px;margin-bottom:3px}
+.uploader__hint{font-size:11px;color:var(--ink-3)}
+.uploader input{position:absolute;left:-9999px;width:1px;height:1px;opacity:0}
+
+.preview{margin-bottom:14px;position:relative}
+.preview img{width:100%;aspect-ratio:4/5;object-fit:cover;border-radius:var(--r-lg)}
+.preview__remove{
+  position:absolute;top:10px;right:10px;width:34px;height:34px;
+  background:rgba(255,255,255,0.95);border:none;border-radius:50%;
+  font-size:16px;cursor:pointer;box-shadow:var(--shadow-md);
+}
+
+.notice{
+  background:var(--foam);border-radius:var(--r);
+  padding:12px 14px;margin-bottom:14px;
+  font-size:11px;line-height:1.7;color:var(--ink-2);
+}
+.notice b{color:var(--ink);font-weight:700}
+.notice ul{margin-left:14px;margin-top:4px}
+
+.btn-primary{
+  width:100%;background:var(--ink);color:var(--foam);
+  border:none;padding:15px;font-family:inherit;
+  font-size:14px;font-weight:700;cursor:pointer;border-radius:var(--r);
+}
+.btn-primary:disabled{background:var(--sand-2);color:var(--ink-3);cursor:not-allowed}
+
+.upload__meta{
+  display:flex;justify-content:space-between;
+  margin-top:14px;padding:12px 14px;background:var(--sand-2);
+  border-radius:var(--r);font-size:12px;color:var(--ink-3);
+}
+.upload__meta b{color:var(--ink);font-weight:700;margin-left:3px}
+
+/* ギャラリー */
+.gallery{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.gallery__empty{grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--ink-3)}
+.gallery__empty-icon{font-size:42px;margin-bottom:10px;opacity:0.4}
+.photo-card{
+  background:var(--foam);border-radius:var(--r);
+  overflow:hidden;position:relative;cursor:pointer;
+}
+.photo-card img{width:100%;aspect-ratio:1;object-fit:cover;display:block}
+.photo-card__info{padding:8px 10px}
+.photo-card__name{font-size:11px;font-weight:700;color:var(--ink);margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.photo-card__likes{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--ink-3);font-weight:600}
+
+/* 詳細モーダル */
+.detail-overlay{
+  position:fixed;inset:0;background:rgba(10,31,42,0.92);
+  z-index:100;display:none;align-items:center;justify-content:center;padding:14px;
+}
+.detail-overlay.show{display:flex}
+.detail{
+  background:var(--sand);width:100%;max-width:440px;max-height:92vh;
+  border-radius:var(--r-lg);overflow-y:auto;display:flex;flex-direction:column;
+}
+.detail__close{
+  position:absolute;top:18px;right:18px;width:38px;height:38px;
+  background:rgba(255,255,255,0.95);border:none;border-radius:50%;
+  font-size:18px;cursor:pointer;box-shadow:var(--shadow-md);z-index:1;
+}
+.detail__img{width:100%;aspect-ratio:1;object-fit:cover;background:#000}
+.detail__body{padding:16px}
+.detail__name{font-size:15px;font-weight:800;margin-bottom:6px}
+.detail__action-row{display:flex;gap:8px;margin-top:14px}
+.detail__like{
+  flex:1;padding:12px;background:var(--coral);color:white;
+  border:none;border-radius:var(--r);font-weight:700;font-size:13px;cursor:pointer;
+}
+.detail__like.liked{background:var(--ink-3);cursor:default}
+.detail__like:disabled{background:var(--sand-2);color:var(--ink-3);cursor:not-allowed}
+.detail__report{
+  background:transparent;border:1px solid var(--line);padding:10px 14px;
+  border-radius:var(--r);color:var(--ink-3);font-weight:600;font-size:12px;cursor:pointer;
+}
+
+/* コメント */
+.comments{margin-top:18px;padding-top:14px;border-top:1px solid var(--line)}
+.comments__title{font-size:12px;font-weight:700;color:var(--ink-2);margin-bottom:10px}
+.comment{padding:10px 0;border-bottom:1px solid var(--line)}
+.comment__name{font-size:12px;font-weight:700;color:var(--coral);margin-bottom:3px}
+.comment__body{font-size:13px;line-height:1.6;color:var(--ink-2)}
+.comment__form{margin-top:10px}
+.comment__form textarea{
+  width:100%;min-height:60px;padding:10px;border:1px solid var(--line);
+  border-radius:var(--r);font-family:inherit;font-size:13px;resize:vertical;
+}
+.comment__form button{
+  margin-top:6px;padding:8px 14px;background:var(--ink);color:var(--foam);
+  border:none;border-radius:var(--r);font-size:12px;font-weight:700;cursor:pointer;
+}
+
+/* 結果 */
+.result{padding:20px}
+.result__title{font-size:22px;font-weight:800;margin-bottom:18px;text-align:center}
+.result__rank{
+  background:var(--foam);border-radius:var(--r-lg);
+  padding:18px;margin-bottom:14px;display:flex;gap:14px;align-items:center;
+}
+.result__rank-num{
+  font-family:'Inter',sans-serif;font-size:34px;font-weight:800;
+  color:var(--coral);min-width:54px;text-align:center;
+}
+.result__rank-num--1{font-size:54px;color:var(--gold)}
+.result__rank-img{width:80px;height:80px;border-radius:var(--r);object-fit:cover}
+.result__rank-info{flex:1;min-width:0}
+.result__rank-name{font-size:13px;font-weight:800;margin-bottom:3px}
+.result__rank-likes{font-size:11px;color:var(--ink-3);font-weight:600}
+
+/* 名前入力モーダル */
+.name-modal{
+  position:fixed;inset:0;background:var(--sea);
+  background-image:radial-gradient(circle at 30% 30%,rgba(42,141,181,0.4),transparent 50%);
+  z-index:200;display:flex;align-items:center;justify-content:center;
+  padding:24px;overflow-y:auto;
+}
+.name-modal.hidden{display:none}
+.name-card{
+  background:var(--sand);border-radius:var(--r-lg);
+  padding:28px 22px;width:100%;max-width:380px;
+}
+.name-card__title{font-size:20px;font-weight:800;margin-bottom:6px;color:var(--sea)}
+.name-card__sub{font-size:12px;color:var(--ink-3);margin-bottom:18px;line-height:1.6}
+.name-card__field{margin-bottom:14px}
+.name-card__label{display:block;font-size:12px;font-weight:700;margin-bottom:5px;color:var(--ink-2)}
+.name-card__hint{font-size:11px;color:var(--ink-3);margin-bottom:5px;line-height:1.5}
+.name-card__input{
+  width:100%;padding:12px;background:var(--foam);border:1px solid transparent;
+  border-radius:var(--r);font-family:inherit;font-size:14px;outline:none;
+}
+.name-card__input:focus{border-color:var(--coral);background:white}
+.name-card__notice{
+  font-size:11px;color:var(--ink-3);line-height:1.7;
+  background:var(--foam);padding:10px 12px;border-radius:var(--r);
+  margin:14px 0;border-left:3px solid var(--coral);
+}
+.name-card__notice b{color:var(--ink)}
+.name-card__notice ul{margin-left:14px;margin-top:4px}
+.name-card__consent{
+  display:flex;gap:8px;align-items:flex-start;margin:12px 0;font-size:12px;
+}
+.name-card__consent input{margin-top:3px}
+.name-card__consent a{color:var(--coral);text-decoration:underline}
+.name-card__btn{
+  width:100%;background:var(--coral);color:white;border:none;
+  padding:14px;font-family:inherit;font-size:14px;font-weight:700;
+  cursor:pointer;border-radius:var(--r);
+}
+.name-card__btn:disabled{opacity:0.5;cursor:not-allowed}
+
+/* トースト */
+.toast{
+  position:fixed;bottom:80px;left:50%;transform:translateX(-50%);
+  background:var(--ink);color:var(--foam);padding:11px 20px;
+  border-radius:100px;font-size:13px;font-weight:600;
+  z-index:300;opacity:0;pointer-events:none;transition:opacity 0.3s;
+  box-shadow:var(--shadow-md);max-width:90%;
+}
+.toast.show{opacity:1}
+.toast.error{background:var(--coral)}
+
+/* スピナー */
+.spinner{
+  width:24px;height:24px;border:3px solid var(--sand-2);
+  border-top-color:var(--coral);border-radius:50%;
+  animation:spin 0.8s linear infinite;display:inline-block;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<div class="frame">
+
+  <!-- ヘッダー -->
+  <header class="header">
+    <div class="header__title">
+      <span id="eventTitle">フォトコンテスト</span>
+      <small id="eventTheme">PHOTO CONTEST</small>
+    </div>
+    <span class="header__name" id="userBadge" style="display:none;"></span>
+  </header>
+
+  <!-- タブ -->
+  <nav class="tabs">
+    <button class="tab active" data-view="upload">投稿</button>
+    <button class="tab" data-view="gallery">みんなの写真</button>
+    <button class="tab" data-view="result">結果</button>
+  </nav>
+
+  <!-- ビュー -->
+  <main class="views">
+
+    <!-- 投稿ビュー -->
+    <section class="view active" id="view-upload">
+      <div class="upload__hero">
+        <h2 class="upload__title">あなたの一枚を<br>みんなにシェア</h2>
+        <p class="upload__sub" id="uploadSub">スマホで撮った写真をアップロード。みんなが「いいね」で投票します。</p>
+      </div>
+
+      <div class="notice">
+        <b>📷 投稿時の注意</b>
+        <ul>
+          <li>他の人が写っている写真は、必ず本人の了承を得てください。</li>
+          <li>個人情報や会社の機密情報が写り込んだ写真は投稿しないでください。</li>
+          <li>不適切と判断された写真は、主催者判断で非表示・削除する場合があります。</li>
+        </ul>
+      </div>
+
+      <label class="uploader" id="uploaderLabel">
+        <div class="uploader__icon">📷</div>
+        <div class="uploader__text">写真を選ぶ</div>
+        <div class="uploader__hint">タップしてアップロード</div>
+        <input type="file" id="fileInput" accept="image/jpeg,image/jpg,image/png,image/webp">
+      </label>
+
+      <div id="previewSlot"></div>
+
+      <button class="btn-primary" id="submitBtn" disabled>この写真を投稿する</button>
+
+      <div class="upload__meta">
+        <span>投稿者：<b id="metaName">—</b></span>
+        <span>投稿数：<b id="metaCount">0</b> / <span id="metaMax">5</span></span>
+      </div>
+    </section>
+
+    <!-- ギャラリービュー -->
+    <section class="view" id="view-gallery">
+      <div class="notice" id="voteNotice">
+        <b>❤️ 投票時の注意</b>
+        <ul>
+          <li>気に入った写真には「いいね」で応援できます。</li>
+          <li>いいねは、<b>1枚の写真につき1回まで</b>です。</li>
+          <li>自分の投稿写真にはいいねできません。</li>
+          <li>自分以外の写真には<b>何枚でも</b>いいねできます。</li>
+        </ul>
+      </div>
+      <div class="gallery" id="galleryGrid">
+        <div class="gallery__empty" id="galleryEmpty">
+          <div class="gallery__empty-icon">📷</div>
+          <div>まだ写真がありません</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 結果ビュー -->
+    <section class="view" id="view-result">
+      <div class="result">
+        <h2 class="result__title" id="resultTitle">🏆 結果発表</h2>
+        <div id="resultList"></div>
+        <div id="resultEmpty" class="gallery__empty" style="display:none;">
+          <div class="gallery__empty-icon">⏳</div>
+          <div>結果発表をお待ちください</div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+</div>
+
+<!-- 写真詳細モーダル -->
+<div class="detail-overlay" id="detailOverlay">
+  <div class="detail">
+    <button class="detail__close" id="detailClose">×</button>
+    <img class="detail__img" id="detailImg" alt="">
+    <div class="detail__body">
+      <div class="detail__name" id="detailName"></div>
+      <div class="detail__action-row">
+        <button class="detail__like" id="detailLike">❤ いいねする</button>
+        <button class="detail__report" id="detailReport">通報</button>
+      </div>
+      <div class="comments" id="commentsBlock" style="display:none;">
+        <div class="comments__title">コメント</div>
+        <div id="commentsList"></div>
+        <div class="comment__form" id="commentForm">
+          <textarea id="commentInput" placeholder="コメントを入力（最大200文字）" maxlength="200"></textarea>
+          <button id="commentSubmit">送信</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 名前入力モーダル -->
+<div class="name-modal" id="nameModal">
+  <div class="name-card">
+    <h2 class="name-card__title">参加情報入力</h2>
+    <p class="name-card__sub">写真投稿に必要な情報を入力してください。</p>
+
+    <div class="name-card__field">
+      <label class="name-card__label">ニックネーム <span style="color:var(--coral)">*</span></label>
+      <div class="name-card__hint">写真一覧や結果発表で表示されます</div>
+      <input type="text" class="name-card__input" id="nicknameInput" placeholder="例：たろう" maxlength="30">
+    </div>
+
+    <div class="name-card__field" id="regNumberField" style="display:none;">
+      <label class="name-card__label" id="regNumberLabel">登録番号 <span style="color:var(--coral)">*</span></label>
+      <div class="name-card__hint">受付でお伝えした番号を入力してください。<br>例：023</div>
+      <input type="text" class="name-card__input" id="regNumberInput" placeholder="例：023" maxlength="20">
+    </div>
+
+    <div class="name-card__field" id="phoneField" style="display:none;">
+      <label class="name-card__label">電話番号 <span style="color:var(--coral)">*</span></label>
+      <input type="tel" class="name-card__input" id="phoneInput" placeholder="09012345678" maxlength="15">
+    </div>
+
+    <div class="name-card__field" id="employeeIdField" style="display:none;">
+      <label class="name-card__label">社員番号 <span style="color:var(--coral)">*</span></label>
+      <input type="text" class="name-card__input" id="employeeIdInput" maxlength="30">
+    </div>
+
+    <div class="name-card__field" id="emailField" style="display:none;">
+      <label class="name-card__label">メールアドレス <span style="color:var(--coral)">*</span></label>
+      <input type="email" class="name-card__input" id="emailInput" maxlength="100">
+    </div>
+
+    <div class="name-card__notice" id="privacyNotice" style="display:none;">
+      <b>🔒 個人情報の取扱いについて</b>
+      <ul>
+        <li>受賞者確認やイベント運営にのみ使用します。</li>
+        <li>一般参加者には登録番号・連絡先は表示されません。</li>
+        <li>投稿された写真・入力情報は<b id="retentionLabel">主催者確認のうえ削除</b>されます。</li>
+      </ul>
+      <div id="privacyLinks" style="margin-top:6px;display:none;"></div>
+    </div>
+
+    <label class="name-card__consent" id="consentBlock" style="display:none;">
+      <input type="checkbox" id="consentCheck">
+      <span>上記内容に同意して参加します</span>
+    </label>
+
+    <button class="name-card__btn" id="nameSubmit">参加する</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+
+// ============================================================
+// 状態管理
+// ============================================================
+const $ = (s) => document.querySelector(s);
+const $$ = (s) => document.querySelectorAll(s);
+
+const params = new URLSearchParams(location.search);
+const EVENT_ID = params.get('event');
+
+if (!EVENT_ID) {
+  document.body.innerHTML = '<div style="padding:40px;text-align:center;font-family:sans-serif;">URLが不正です。<br>?event=xxxを指定してください。</div>';
+  throw new Error('event_id missing');
+}
+
+const state = {
+  event: null,
+  userId: localStorage.getItem('pc_user_' + EVENT_ID) || ('u_' + Math.random().toString(36).slice(2, 14)),
+  nickname: localStorage.getItem('pc_nick_' + EVENT_ID) || '',
+  uploadedCount: 0,
+  selectedFile: null,
+  selectedDataUrl: null,
+  photos: [],
+  likes: new Set(),
+  myLikes: new Set(),
+  comments: [],
+  currentPhotoId: null,
+  detailPhoto: null,
+  uploading: false,
+};
+localStorage.setItem('pc_user_' + EVENT_ID, state.userId);
+
+// ============================================================
+// ユーティリティ
+// ============================================================
+function showToast(msg, isError = false) {
+  const t = $('#toast');
+  t.textContent = msg;
+  t.classList.toggle('error', isError);
+  t.classList.add('show');
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function errMsg(err) {
+  const m = (err && err.message) || '';
+  const map = {
+    'event_not_found': 'イベントが見つかりません',
+    'event_not_active': 'イベントは現在稼働していません',
+    'upload_not_started': '投稿はまだ受付開始前です',
+    'upload_ended': '投稿受付は終了しました',
+    'vote_not_started': '投票はまだ開始されていません',
+    'vote_ended': '投票は終了しました',
+    'registration_number_required': '登録番号を入力してください',
+    'phone_required': '電話番号を入力してください',
+    'employee_id_required': '社員番号を入力してください',
+    'email_required': 'メールアドレスを入力してください',
+    'upload_limit_exceeded': '投稿上限に達しました',
+    'nickname_required': 'ニックネームを入力してください',
+    'nickname_too_long': 'ニックネームは30文字以内です',
+    'photo_not_found': '写真が見つかりません',
+    'photo_not_active': '対象の写真は現在表示されていません',
+    'cannot_like_own': '自分の写真にはいいねできません',
+    'comments_disabled': 'このイベントではコメントは無効です',
+    'body_required': 'コメントを入力してください',
+    'body_too_long': 'コメントは200文字以内です',
+    'already_reported': 'すでに通報済みです',
+  };
+  for (const k in map) if (m.includes(k)) return map[k];
+  return m || 'エラーが発生しました';
+}
+
+// ============================================================
+// 初期化
+// ============================================================
+async function init() {
+  try {
+    state.event = await DB.getEvent(EVENT_ID);
+    if (!state.event) {
+      showToast('イベントが見つかりません', true);
+      return;
+    }
+
+    applyEventSettings();
+    $('#metaMax').textContent = state.event.max_uploads_per_user || 5;
+
+    // 名前入力モーダルの設定
+    setupNameModal();
+
+    if (state.nickname) {
+      $('#nameModal').classList.add('hidden');
+      onUserReady();
+    } else {
+      $('#nameModal').classList.remove('hidden');
+    }
+
+    // データロード
+    await refreshAll();
+
+    // タブ切替
+    $$('.tab').forEach(t => t.addEventListener('click', () => switchTab(t.dataset.view)));
+
+    // Realtime購読
+    DB.subscribeEvent(EVENT_ID, {
+      onPhotoChange: () => loadPhotos(),
+      onLikeChange: () => { loadPhotos(); loadLikes(); },
+      onCommentChange: () => loadComments(),
+      onEventChange: async () => {
+        state.event = await DB.getEvent(EVENT_ID);
+        applyEventSettings();
+      },
+      onConnect: () => {
+        if (window.__wasDisc) { showToast('再接続しました'); window.__wasDisc = false; }
+      },
+      onDisconnect: () => {
+        window.__wasDisc = true;
+      },
+    });
+  } catch (err) {
+    console.error(err);
+    showToast('初期化失敗：' + errMsg(err), true);
+  }
+}
+
+// ============================================================
+// 名前入力モーダル設定
+// ============================================================
+function setupNameModal() {
+  const ev = state.event;
+
+  // 登録番号
+  if (ev.enable_registration_number) {
+    $('#regNumberField').style.display = 'block';
+    $('#regNumberLabel').innerHTML = `${escapeHtml(ev.registration_label || '登録番号')} <span style="color:var(--coral)">*</span>`;
+    $('#regNumberInput').placeholder = '例：023';
+  }
+
+  // 電話・社員番号・メール
+  if (ev.require_phone) $('#phoneField').style.display = 'block';
+  if (ev.require_employee_id) $('#employeeIdField').style.display = 'block';
+  if (ev.require_email) $('#emailField').style.display = 'block';
+
+  // プライバシー説明
+  const hasPersonalData = ev.enable_registration_number || ev.require_phone || ev.require_employee_id || ev.require_email;
+  if (hasPersonalData) {
+    $('#privacyNotice').style.display = 'block';
+    $('#consentBlock').style.display = 'flex';
+
+    // 保持期間ラベル
+    const retLabel = ev.retention_mode === 'auto10' ? 'イベント終了10日後に自動削除'
+                   : ev.retention_mode === 'auto30' ? 'イベント終了30日後に自動削除'
+                   : '主催者確認のうえ削除';
+    $('#retentionLabel').textContent = retLabel;
+
+    // URL
+    const links = [];
+    if (ev.show_privacy_url && ev.privacy_policy_url) {
+      links.push(`<a href="${escapeHtml(ev.privacy_policy_url)}" target="_blank" rel="noopener">プライバシーポリシー</a>`);
+    }
+    if (ev.show_terms_url && ev.terms_url) {
+      links.push(`<a href="${escapeHtml(ev.terms_url)}" target="_blank" rel="noopener">利用規約</a>`);
+    }
+    if (links.length > 0) {
+      $('#privacyLinks').innerHTML = '📄 ' + links.join(' ／ ');
+      $('#privacyLinks').style.display = 'block';
+    }
+  }
+
+  // 既存ニックネームを復元
+  if (state.nickname) {
+    $('#nicknameInput').value = state.nickname;
+  }
+
+  $('#nameSubmit').addEventListener('click', submitNameForm);
+  $('#nicknameInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('#regNumberInput').focus?.(); });
+}
+
+async function submitNameForm() {
+  const ev = state.event;
+  const nickname = $('#nicknameInput').value.trim();
+  if (!nickname) { showToast('ニックネームを入力してください', true); return; }
+  if (nickname.length > 30) { showToast('ニックネームは30文字以内', true); return; }
+
+  // 識別情報
+  const identifiers = {};
+  if (ev.enable_registration_number) {
+    const v = $('#regNumberInput').value.trim();
+    if (!v) { showToast('登録番号を入力してください', true); return; }
+    identifiers.registration_number = v;
+  }
+  if (ev.require_phone) {
+    const v = $('#phoneInput').value.trim();
+    if (!v) { showToast('電話番号を入力してください', true); return; }
+    identifiers.phone = v;
+  }
+  if (ev.require_employee_id) {
+    const v = $('#employeeIdInput').value.trim();
+    if (!v) { showToast('社員番号を入力してください', true); return; }
+    identifiers.employee_id = v;
+  }
+  if (ev.require_email) {
+    const v = $('#emailInput').value.trim();
+    if (!v) { showToast('メールアドレスを入力してください', true); return; }
+    identifiers.email = v;
+  }
+
+  // 同意チェック
+  const hasPersonalData = ev.enable_registration_number || ev.require_phone || ev.require_employee_id || ev.require_email;
+  if (hasPersonalData && !$('#consentCheck').checked) {
+    showToast('プライバシー説明への同意が必要です', true);
+    return;
+  }
+
+  state.nickname = nickname;
+  state.identifiers = identifiers;
+  localStorage.setItem('pc_nick_' + EVENT_ID, nickname);
+  // 識別情報はlocalStorageには保存しない（投稿時に毎回再利用するためメモリのみ）
+
+  $('#nameModal').classList.add('hidden');
+  onUserReady();
+}
+
+function onUserReady() {
+  $('#userBadge').textContent = state.nickname;
+  $('#userBadge').style.display = 'inline-flex';
+  $('#metaName').textContent = state.nickname;
+}
+
+function applyEventSettings() {
+  $('#metaMax').textContent = state.event.max_uploads_per_user || 5;
+  $('#eventTitle').textContent = state.event.name || 'フォトコンテスト';
+  $('#eventTheme').textContent = state.event.theme || 'PHOTO CONTEST';
+  // 背景テーマ反映
+  const allowed = ['aquarium','family','corporate','spring','night'];
+  const t = state.event.theme_preset;
+  document.body.dataset.theme = allowed.includes(t) ? t : 'aquarium';
+}
+
+// ============================================================
+// データロード
+// ============================================================
+async function refreshAll() {
+  await Promise.all([loadPhotos(), loadLikes(), loadComments()]);
+}
+
+async function loadPhotos() {
+  try {
+    state.photos = await DB.listPhotos(EVENT_ID);
+    state.uploadedCount = state.photos.filter(p =>
+      // user_idが公開Viewにないため、localStorage の posted_ids から数える
+      false // 後述：localStorage で投稿済みID管理
+    ).length;
+    // localStorageベースで自分の投稿数カウント
+    const postedKey = 'pc_posted_' + EVENT_ID;
+    let postedIds = [];
+    try { postedIds = JSON.parse(localStorage.getItem(postedKey) || '[]'); } catch {}
+    state.uploadedCount = postedIds.filter(id => state.photos.find(p => p.photo_id === id)).length;
+    $('#metaCount').textContent = state.uploadedCount;
+    renderGallery();
+    renderResult();
+  } catch (err) {
+    console.error('loadPhotos:', err);
+  }
+}
+
+async function loadLikes() {
+  try {
+    const myPhotoIds = await DB.getMyLikes(EVENT_ID, state.userId);
+    state.myLikes = new Set(myPhotoIds);
+    renderGallery();
+  } catch (err) {
+    console.error('loadLikes:', err);
+  }
+}
+
+async function loadComments() {
+  try {
+    if (state.event && state.event.enable_comments) {
+      state.comments = await DB.listComments(EVENT_ID);
+      if (state.detailPhoto) renderDetailComments();
+    }
+  } catch (err) {
+    console.error('loadComments:', err);
+  }
+}
+
+// ============================================================
+// タブ切替
+// ============================================================
+function switchTab(name) {
+  $$('.tab').forEach(t => t.classList.toggle('active', t.dataset.view === name));
+  $$('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + name));
+}
+
+// ============================================================
+// 投稿
+// ============================================================
+$('#fileInput').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  // 形式チェック
+  const allowed = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+  if (!allowed.includes(file.type)) {
+    showToast('対応形式：JPG/PNG/WEBP のみ', true);
+    return;
+  }
+  if (file.size > 30 * 1024 * 1024) {
+    showToast('ファイルサイズが大きすぎます（30MB以内）', true);
+    return;
+  }
+
+  state.selectedFile = file;
+  // プレビュー
+  const reader = new FileReader();
+  reader.onload = () => {
+    state.selectedDataUrl = reader.result;
+    $('#previewSlot').innerHTML = `
+      <div class="preview">
+        <img src="${reader.result}" alt="preview">
+        <button class="preview__remove" id="previewRemove">×</button>
+      </div>
+    `;
+    $('#previewRemove').addEventListener('click', clearPreview);
+    $('#submitBtn').disabled = false;
+  };
+  reader.readAsDataURL(file);
+});
+
+function clearPreview() {
+  state.selectedFile = null;
+  state.selectedDataUrl = null;
+  $('#previewSlot').innerHTML = '';
+  $('#submitBtn').disabled = true;
+  $('#fileInput').value = '';
+}
+
+$('#submitBtn').addEventListener('click', async () => {
+  if (state.uploading) return;
+  if (!state.selectedFile) return;
+  if (!state.nickname) { showToast('ニックネーム未設定', true); return; }
+
+  state.uploading = true;
+  const btn = $('#submitBtn');
+  btn.disabled = true;
+  btn.textContent = 'アップロード中...';
+
+  try {
+    // 画像圧縮
+    const compressed = await compressImage(state.selectedFile, 1200, 0.8);
+
+    // Storageにアップロード
+    const { path, url } = await DB.uploadImage(EVENT_ID, compressed);
+
+    // RPC呼び出し
+    let photoId;
+    try {
+      photoId = await DB.submitPhoto({
+        eventId: EVENT_ID,
+        userId: state.userId,
+        nickname: state.nickname,
+        imageUrl: url,
+        storagePath: path,
+        identifiers: state.identifiers || {},
+      });
+    } catch (rpcErr) {
+      // DB登録失敗時、Storageの孤児画像はクライアントから削除できないため
+      // ログだけ残す（管理者が後で手動削除）
+      console.warn('Orphan image (Storage削除はクライアント不可):', path);
+      throw rpcErr;
+    }
+
+    // 投稿IDをlocalStorageに記録
+    const postedKey = 'pc_posted_' + EVENT_ID;
+    let postedIds = [];
+    try { postedIds = JSON.parse(localStorage.getItem(postedKey) || '[]'); } catch {}
+    postedIds.push(photoId);
+    localStorage.setItem(postedKey, JSON.stringify(postedIds));
+
+    showToast('投稿完了！');
+    clearPreview();
+    await loadPhotos();
+  } catch (err) {
+    console.error(err);
+    showToast(errMsg(err), true);
+  } finally {
+    state.uploading = false;
+    btn.textContent = 'この写真を投稿する';
+    btn.disabled = !state.selectedFile;
+  }
+});
+
+async function compressImage(file, maxW, quality) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      let w = img.width, h = img.height;
+      if (w > maxW) { h = h * (maxW / w); w = maxW; }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      canvas.toBlob(b => resolve(new File([b], file.name, { type: 'image/jpeg' })), 'image/jpeg', quality);
+    };
+    img.onerror = reject;
+    img.src = URL.createObjectURL(file);
+  });
+}
+
+// ============================================================
+// ギャラリー描画
+// ============================================================
+function renderGallery() {
+  const grid = $('#galleryGrid');
+  if (!state.photos || state.photos.length === 0) {
+    grid.innerHTML = `<div class="gallery__empty"><div class="gallery__empty-icon">📷</div><div>まだ写真がありません</div></div>`;
+    return;
+  }
+  grid.innerHTML = state.photos.map(p => `
+    <div class="photo-card" data-id="${p.photo_id}">
+      <img src="${escapeHtml(p.image_url)}" alt="">
+      <div class="photo-card__info">
+        <div class="photo-card__name">${escapeHtml(p.nickname)}</div>
+        ${state.event.show_like_count !== false
+          ? `<div class="photo-card__likes">❤ ${p.like_count || 0}</div>`
+          : ''}
+      </div>
+    </div>
+  `).join('');
+  grid.querySelectorAll('.photo-card').forEach(card => {
+    card.addEventListener('click', () => openDetail(card.dataset.id));
+  });
+}
+
+// ============================================================
+// 結果表示
+// ============================================================
+function renderResult() {
+  const list = $('#resultList');
+  const empty = $('#resultEmpty');
+  if (!state.photos || state.photos.length === 0) {
+    list.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+  const sorted = [...state.photos].sort((a, b) => (b.like_count || 0) - (a.like_count || 0));
+  const top5 = sorted.slice(0, 5);
+  list.innerHTML = top5.map((p, i) => {
+    const rank = i + 1;
+    return `
+      <div class="result__rank">
+        <div class="result__rank-num result__rank-num--${rank}">${rank}</div>
+        <img src="${escapeHtml(p.image_url)}" class="result__rank-img" alt="">
+        <div class="result__rank-info">
+          <div class="result__rank-name">${escapeHtml(p.nickname)}</div>
+          <div class="result__rank-likes">❤ ${p.like_count || 0}</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ============================================================
+// 詳細モーダル
+// ============================================================
+function openDetail(photoId) {
+  const photo = state.photos.find(p => p.photo_id === photoId);
+  if (!photo) return;
+  state.detailPhoto = photo;
+  $('#detailImg').src = photo.image_url;
+  $('#detailName').textContent = photo.nickname;
+
+  // いいねボタン
+  const isMyPhoto = isMyPostedPhoto(photoId);
+  const isLiked = state.myLikes.has(photoId);
+  const likeBtn = $('#detailLike');
+  if (isMyPhoto) {
+    likeBtn.disabled = true;
+    likeBtn.textContent = '自分の写真';
+  } else if (isLiked) {
+    likeBtn.disabled = false;
+    likeBtn.textContent = '✓ いいね済み（取消）';
+    likeBtn.classList.add('liked');
+  } else {
+    likeBtn.disabled = false;
+    likeBtn.textContent = '❤ いいねする';
+    likeBtn.classList.remove('liked');
+  }
+
+  // コメント
+  if (state.event.enable_comments) {
+    $('#commentsBlock').style.display = 'block';
+    renderDetailComments();
+  } else {
+    $('#commentsBlock').style.display = 'none';
+  }
+
+  $('#detailOverlay').classList.add('show');
+}
+
+function isMyPostedPhoto(photoId) {
+  const postedKey = 'pc_posted_' + EVENT_ID;
+  let postedIds = [];
+  try { postedIds = JSON.parse(localStorage.getItem(postedKey) || '[]'); } catch {}
+  return postedIds.includes(photoId);
+}
+
+function renderDetailComments() {
+  if (!state.detailPhoto) return;
+  const list = $('#commentsList');
+  const comments = state.comments.filter(c => c.photo_id === state.detailPhoto.photo_id);
+  list.innerHTML = comments.length > 0
+    ? comments.map(c => `
+        <div class="comment">
+          <div class="comment__name">${escapeHtml(c.nickname)}</div>
+          <div class="comment__body">${escapeHtml(c.body)}</div>
+        </div>
+      `).join('')
+    : '<div style="font-size:12px;color:var(--ink-3);padding:8px 0;">まだコメントはありません</div>';
+}
+
+$('#detailClose').addEventListener('click', () => {
+  $('#detailOverlay').classList.remove('show');
+  state.detailPhoto = null;
+});
+
+$('#detailLike').addEventListener('click', async () => {
+  if (!state.detailPhoto) return;
+  const photoId = state.detailPhoto.photo_id;
+  const btn = $('#detailLike');
+  btn.disabled = true;
+  try {
+    if (state.myLikes.has(photoId)) {
+      await DB.removeLike(EVENT_ID, photoId, state.userId);
+      state.myLikes.delete(photoId);
+      btn.textContent = '❤ いいねする';
+      btn.classList.remove('liked');
+      btn.disabled = false;
+    } else {
+      const result = await DB.addLike(EVENT_ID, photoId, state.userId);
+      if (result === false) {
+        showToast('すでにいいね済みです');
+      } else {
+        showToast('いいねしました ❤');
+      }
+      state.myLikes.add(photoId);
+      btn.textContent = '✓ いいね済み（取消）';
+      btn.classList.add('liked');
+      btn.disabled = false;
+    }
+    await loadPhotos();
+  } catch (err) {
+    console.error(err);
+    showToast(errMsg(err), true);
+    btn.disabled = false;
+  }
+});
+
+$('#detailReport').addEventListener('click', async () => {
+  if (!state.detailPhoto) return;
+  if (!confirm('この写真を主催者に通報しますか？\n（不適切な内容を確認するために使用します）')) return;
+  try {
+    await DB.reportPhoto(EVENT_ID, state.detailPhoto.photo_id, state.userId, '');
+    showToast('通報を受け付けました');
+  } catch (err) {
+    showToast(errMsg(err), true);
+  }
+});
+
+$('#commentSubmit').addEventListener('click', async () => {
+  if (!state.detailPhoto) return;
+  const body = $('#commentInput').value.trim();
+  if (!body) { showToast('コメントを入力してください', true); return; }
+  if (body.length > 200) { showToast('200文字以内で入力してください', true); return; }
+
+  $('#commentSubmit').disabled = true;
+  try {
+    await DB.addComment(EVENT_ID, state.detailPhoto.photo_id, state.userId, state.nickname, body);
+    $('#commentInput').value = '';
+    showToast('コメント送信完了');
+    await loadComments();
+  } catch (err) {
+    showToast(errMsg(err), true);
+  } finally {
+    $('#commentSubmit').disabled = false;
+  }
+});
+
+// 起動
+init();
+</script>
+</body>
+</html>

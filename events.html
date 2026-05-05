@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>イベント管理 | フォトコンテスト</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;700;800&family=Noto+Sans+JP:wght@500;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="db.js"></script>
+<style>
+:root{
+  --sea:#0a3d52;--sand:#f5ede0;--sand-2:#ede2cd;
+  --foam:#faf6ec;--ink:#15171c;--ink-2:#2c4250;--ink-3:#6c7d8a;
+  --coral:#d65a3a;
+  --line:rgba(21,23,28,0.1);
+  --r:12px;--r-lg:18px;
+  --shadow-md:0 4px 12px rgba(10,31,42,0.1);
+  --red:#c44569;
+  --green:#3a9d5d;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  background:var(--sand);color:var(--ink);
+  font-family:'Noto Sans JP',sans-serif;font-weight:500;
+  min-height:100vh;
+  -webkit-font-smoothing:antialiased;
+}
+.container{max-width:980px;margin:0 auto;padding:30px 20px 60px}
+
+.header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding-bottom:18px;margin-bottom:24px;border-bottom:2px solid var(--ink);
+  flex-wrap:wrap;gap:12px;
+}
+.header__brand{display:flex;align-items:center;gap:10px}
+.header__icon{
+  width:38px;height:38px;background:var(--sea);
+  border-radius:8px;display:flex;align-items:center;justify-content:center;
+  font-size:18px;
+}
+.header__title{font-size:16px;font-weight:800;letter-spacing:0.04em}
+.header__title small{display:block;font-size:10px;color:var(--ink-3);font-weight:700;letter-spacing:0.18em;margin-top:2px}
+.header__actions{display:flex;gap:8px;flex-wrap:wrap}
+
+.btn{
+  background:var(--ink);color:var(--foam);border:none;
+  padding:10px 16px;font-family:inherit;font-size:13px;font-weight:700;
+  cursor:pointer;border-radius:var(--r);transition:all 0.2s;
+  display:inline-flex;align-items:center;gap:5px;text-decoration:none;
+}
+.btn:hover{background:var(--coral)}
+.btn--sm{padding:6px 11px;font-size:11px}
+.btn--ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.btn--ghost:hover{background:var(--sand-2);color:var(--ink);border-color:var(--ink)}
+.btn--red{background:var(--red)}
+.btn--full{width:100%;justify-content:center;padding:13px}
+
+.section{margin-bottom:30px}
+.section__title{
+  font-size:11px;font-weight:800;color:var(--ink-3);letter-spacing:0.2em;
+  margin-bottom:12px;text-transform:uppercase;
+}
+
+.events{display:grid;gap:10px}
+.event-card{
+  background:var(--foam);border-radius:var(--r-lg);padding:14px 16px;
+  display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;
+}
+.event-card__main{min-width:0}
+.event-card__name{font-size:14px;font-weight:800;color:var(--ink);margin-bottom:3px}
+.event-card__meta{font-size:11px;color:var(--ink-3);display:flex;gap:10px;flex-wrap:wrap}
+.event-card__status{
+  display:inline-block;padding:2px 7px;border-radius:100px;
+  font-size:9px;font-weight:800;letter-spacing:0.05em;
+}
+.event-card__status--draft{background:var(--ink-3);color:white}
+.event-card__status--active{background:var(--coral);color:white}
+.event-card__status--archived{background:var(--sand-2);color:var(--ink-3)}
+.event-card__actions{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end}
+
+.empty{
+  text-align:center;padding:40px 20px;
+  background:var(--foam);border-radius:var(--r-lg);color:var(--ink-3);font-size:13px;
+}
+
+/* 認証ロック画面 */
+.lock-overlay{
+  position:fixed;inset:0;background:var(--sea);z-index:200;
+  background-image:radial-gradient(circle at 30% 30%,rgba(42,141,181,0.4),transparent 50%);
+  display:flex;align-items:center;justify-content:center;padding:20px;
+}
+.lock-overlay.hidden{display:none}
+.lock-card{
+  background:var(--sand);border-radius:var(--r-lg);
+  padding:36px 24px;width:100%;max-width:380px;text-align:center;
+}
+.lock-card__icon{font-size:42px;margin-bottom:12px}
+.lock-card__title{font-size:18px;font-weight:800;margin-bottom:6px}
+.lock-card__sub{font-size:12px;color:var(--ink-3);margin-bottom:18px;line-height:1.6}
+.lock-card__input{
+  width:100%;padding:13px;background:white;border:2px solid transparent;
+  border-radius:var(--r);font-family:inherit;font-size:15px;text-align:center;
+  letter-spacing:0.1em;margin-bottom:10px;
+}
+.lock-card__input.error{border-color:var(--red);animation:shake 0.3s}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.lock-card__hint{font-size:11px;color:var(--ink-3);margin-top:12px;line-height:1.6}
+.lock-card__hint a{color:var(--coral);text-decoration:none;font-weight:700;cursor:pointer}
+
+/* モーダル */
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(10,31,42,0.7);
+  z-index:150;display:none;align-items:center;justify-content:center;padding:20px;
+}
+.modal-overlay.show{display:flex}
+.modal{
+  background:var(--sand);border-radius:var(--r-lg);
+  padding:26px 24px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;
+}
+.modal__title{font-size:18px;font-weight:800;margin-bottom:6px}
+.modal__sub{font-size:12px;color:var(--ink-3);margin-bottom:18px;line-height:1.6}
+.modal__field{margin-bottom:13px}
+.modal__field label{display:block;font-size:12px;font-weight:700;margin-bottom:5px;color:var(--ink-2)}
+.modal__hint{font-size:11px;color:var(--ink-3);margin-top:4px;line-height:1.5}
+.modal__input{
+  width:100%;background:white;border:1px solid var(--line);
+  border-radius:var(--r);padding:11px 13px;
+  font-family:inherit;font-size:14px;outline:none;
+}
+.modal__input:focus{border-color:var(--coral)}
+.modal__actions{display:flex;gap:8px;margin-top:18px}
+.modal__actions .btn{flex:1;justify-content:center;padding:13px}
+
+/* URL表示 */
+.url-row{
+  background:white;border-radius:var(--r);padding:11px;
+  display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;
+  margin-bottom:6px;
+}
+.url-row__label{font-size:11px;font-weight:700;color:var(--ink-2);margin-bottom:3px}
+.url-row__url{font-family:'Inter',sans-serif;font-size:11px;color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.url-row__btn{
+  padding:7px 12px;background:var(--ink);color:white;
+  border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;
+}
+.warning-block{
+  background:#fff8e1;border:1px solid var(--coral);border-radius:var(--r);
+  padding:11px 14px;margin:14px 0;font-size:12px;line-height:1.7;color:var(--ink-2);
+}
+.warning-block b{color:var(--coral)}
+
+/* トースト */
+.toast{
+  position:fixed;bottom:30px;left:50%;transform:translateX(-50%);
+  background:var(--ink);color:var(--foam);padding:10px 22px;
+  border-radius:100px;font-size:13px;font-weight:600;z-index:300;
+  opacity:0;pointer-events:none;transition:opacity 0.3s;
+  box-shadow:var(--shadow-md);
+}
+.toast.show{opacity:1}
+.toast.error{background:var(--coral)}
+</style>
+</head>
+<body>
+
+<!-- ロック画面 -->
+<div class="lock-overlay" id="lockOverlay">
+  <div class="lock-card">
+    <div class="lock-card__icon">🔒</div>
+    <div class="lock-card__title" id="lockTitle">アクセスパスワード</div>
+    <div class="lock-card__sub" id="lockSub">この管理画面のパスワードを入力してください</div>
+    <input type="password" class="lock-card__input" id="lockInput" placeholder="パスワード" autocomplete="off">
+    <button class="btn btn--full" id="lockBtn">ログイン</button>
+    <div class="lock-card__hint" id="lockHint"></div>
+    <div style="margin-top:14px;font-size:10px;color:var(--ink-3);line-height:1.6;text-align:left;background:var(--foam);padding:10px 12px;border-radius:8px;">
+      💡 これは画面ロック用のパスワードです。<br>
+      Supabase 上のイベント操作は、別途 Supabase に設定した<br>
+      <b>管理キー（admin_key）</b>と<b>host_key</b>で保護されています。
+    </div>
+  </div>
+</div>
+
+<div class="container" id="mainContainer" style="display:none;">
+
+  <header class="header">
+    <div class="header__brand">
+      <div class="header__icon">📸</div>
+      <div class="header__title">
+        フォトコンテスト
+        <small>EVENT MANAGER</small>
+      </div>
+    </div>
+    <div class="header__actions">
+      <button class="btn btn--ghost btn--sm" id="logoutBtn">ログアウト</button>
+      <button class="btn btn--ghost btn--sm" id="settingsBtn">⚙ パスワード</button>
+      <button class="btn" id="newEventBtn">＋ 新規イベント</button>
+    </div>
+  </header>
+
+  <div class="warning-block">
+    <b>⚠️ host_key の管理について</b><br>
+    各イベントの管理画面（admin.html）には <b>host_key</b> が必要です。<br>
+    新規作成時に表示される host_key は<b>必ず安全な場所に保管</b>してください。<br>
+    紛失すると管理操作ができなくなります（再発行は不可）。
+  </div>
+
+  <div class="section">
+    <div class="section__title">運用中・予定 / Active</div>
+    <div class="events" id="activeEvents"></div>
+  </div>
+
+  <div class="section">
+    <div class="section__title">アーカイブ / Archived</div>
+    <div class="events" id="archivedEvents"></div>
+  </div>
+
+</div>
+
+<!-- admin_key入力モーダル -->
+<div class="modal-overlay" id="adminKeyModal">
+  <div class="modal">
+    <div class="modal__title" id="adminKeyTitle">管理キーを入力</div>
+    <div class="modal__sub" id="adminKeySub">
+      Supabaseの app_settings に登録されている管理キー（admin_key）を入力してください。<br>
+      この端末に保存され、次回以降は不要です。
+    </div>
+    <div class="modal__field">
+      <label>管理キー</label>
+      <input type="password" class="modal__input" id="adminKeyInput" placeholder="管理キー" autocomplete="off">
+      <div class="modal__hint">SETUP.md の手順で Supabase に設定した値を入力してください。</div>
+    </div>
+    <div class="modal__actions">
+      <button class="btn btn--ghost" id="adminKeyCancel">キャンセル</button>
+      <button class="btn" id="adminKeyConfirm">確認</button>
+    </div>
+  </div>
+</div>
+
+<!-- 新規作成モーダル -->
+<div class="modal-overlay" id="createModal">
+  <div class="modal">
+    <div class="modal__title">新規イベント作成</div>
+    <div class="modal__sub">基本情報を入力してください。詳細はホスト画面で設定できます。</div>
+    <div class="modal__field">
+      <label>イベント名 <span style="color:var(--coral)">*</span></label>
+      <input type="text" class="modal__input" id="newName" placeholder="例：豊田自動織機労組 春季ファミリー祭り" maxlength="80">
+    </div>
+    <div class="modal__field">
+      <label>イベントID（URL用） <span style="color:var(--coral)">*</span></label>
+      <input type="text" class="modal__input" id="newId" placeholder="例：toyota_shokki_2026" maxlength="40">
+      <div class="modal__hint">半角英数字とハイフン・アンダースコアのみ。後から変更不可。</div>
+    </div>
+    <div class="modal__field">
+      <label>テーマ</label>
+      <input type="text" class="modal__input" id="newTheme" placeholder="例：家族の思い出" maxlength="30">
+    </div>
+    <div class="modal__field">
+      <label>host_key（管理キー） <span style="color:var(--coral)">*</span></label>
+      <div style="display:flex;gap:6px;">
+        <input type="text" class="modal__input" id="newHostKey" placeholder="自動生成された値" minlength="8">
+        <button class="btn btn--ghost" id="genHostKeyBtn" type="button">再生成</button>
+      </div>
+      <div class="modal__hint">8文字以上。<b>絶対に公開しないでください</b>。後から確認はできません。</div>
+    </div>
+    <div class="modal__actions">
+      <button class="btn btn--ghost" id="createCancel">キャンセル</button>
+      <button class="btn" id="createConfirm">作成</button>
+    </div>
+  </div>
+</div>
+
+<!-- URL表示モーダル -->
+<div class="modal-overlay" id="urlModal">
+  <div class="modal">
+    <div class="modal__title" id="urlTitle">作成完了</div>
+    <div class="modal__sub">以下のURLとhost_keyを安全に保管してください</div>
+
+    <div class="warning-block">
+      <b>⚠️ host_keyは再表示できません</b><br>
+      この画面を閉じる前に、必ず安全な場所にコピーしてください。
+    </div>
+
+    <div class="url-row">
+      <div>
+        <div class="url-row__label">📱 参加者用URL</div>
+        <div class="url-row__url" id="urlParticipant"></div>
+      </div>
+      <button class="url-row__btn" data-copy="urlParticipant">コピー</button>
+    </div>
+    <div class="url-row">
+      <div>
+        <div class="url-row__label">🔒 ホスト用URL（host_key付き）</div>
+        <div class="url-row__url" id="urlHost"></div>
+      </div>
+      <button class="url-row__btn" data-copy="urlHost">コピー</button>
+    </div>
+    <div class="url-row">
+      <div>
+        <div class="url-row__label">🔑 host_key 単体</div>
+        <div class="url-row__url" id="urlHostKey"></div>
+      </div>
+      <button class="url-row__btn" data-copy="urlHostKey">コピー</button>
+    </div>
+
+    <div class="modal__actions">
+      <button class="btn btn--ghost" id="urlClose">閉じる</button>
+      <a class="btn" id="urlOpenAdmin" target="_blank">管理画面を開く →</a>
+    </div>
+  </div>
+</div>
+
+<!-- パスワード変更モーダル -->
+<div class="modal-overlay" id="settingsModal">
+  <div class="modal">
+    <div class="modal__title">アクセスパスワード変更</div>
+    <div class="modal__sub">events.html へのアクセス制限。変更後は再ログインが必要です。</div>
+    <div class="modal__field">
+      <label>新しいパスワード</label>
+      <input type="password" class="modal__input" id="newPassword" placeholder="4文字以上" autocomplete="new-password">
+    </div>
+    <div class="modal__actions">
+      <button class="btn btn--ghost" id="settingsCancel">キャンセル</button>
+      <button class="btn" id="settingsSave">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 削除確認モーダル -->
+<div class="modal-overlay" id="deleteModal">
+  <div class="modal">
+    <div class="modal__title">イベント完全削除</div>
+    <div class="modal__sub">
+      <b style="color:var(--red)">⚠️ 元に戻せません。</b><br>
+      投稿写真・コメント・個人情報・操作ログまですべて削除されます。
+    </div>
+    <div class="modal__field">
+      <label>確認のためイベント名を入力してください</label>
+      <input type="text" class="modal__input" id="deleteConfirmInput" placeholder="">
+      <div class="modal__hint" id="deleteEventName"></div>
+    </div>
+    <div class="modal__field">
+      <label>host_key</label>
+      <input type="password" class="modal__input" id="deleteHostKey" placeholder="このイベントのhost_key">
+    </div>
+    <div class="modal__actions">
+      <button class="btn btn--ghost" id="deleteCancel">キャンセル</button>
+      <button class="btn btn--red" id="deleteConfirm">完全削除する</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+
+const $ = (s) => document.querySelector(s);
+const $$ = (s) => document.querySelectorAll(s);
+
+const PASSWORD_KEY = 'pc_master_pwd_hash';
+const AUTH_KEY = 'pc_master_auth_token';
+const ADMIN_KEY = 'pc_admin_key';
+
+function getAdminKey() {
+  return localStorage.getItem(ADMIN_KEY) || '';
+}
+
+function setAdminKey(k) {
+  if (k) localStorage.setItem(ADMIN_KEY, k);
+  else localStorage.removeItem(ADMIN_KEY);
+}
+
+// 管理キーを要求して取得（無効な場合は再入力）
+async function ensureAdminKey() {
+  let key = getAdminKey();
+  if (key) {
+    const ok = await DB.verifyAdminKey(key);
+    if (ok) return key;
+    // 保存済みが無効になった場合
+    setAdminKey('');
+  }
+  return new Promise((resolve) => {
+    $('#adminKeyInput').value = '';
+    $('#adminKeyModal').classList.add('show');
+    setTimeout(() => $('#adminKeyInput').focus(), 100);
+    const onConfirm = async () => {
+      const v = $('#adminKeyInput').value.trim();
+      if (!v) { showToast('管理キーを入力してください', true); return; }
+      try {
+        const ok = await DB.verifyAdminKey(v);
+        if (!ok) { showToast('管理キーが正しくありません', true); return; }
+        setAdminKey(v);
+        $('#adminKeyModal').classList.remove('show');
+        $('#adminKeyConfirm').onclick = null;
+        $('#adminKeyCancel').onclick = null;
+        resolve(v);
+      } catch (e) { showToast('検証エラー：' + (e.message || ''), true); }
+    };
+    const onCancel = () => {
+      $('#adminKeyModal').classList.remove('show');
+      $('#adminKeyConfirm').onclick = null;
+      $('#adminKeyCancel').onclick = null;
+      resolve(null);
+    };
+    $('#adminKeyConfirm').onclick = onConfirm;
+    $('#adminKeyCancel').onclick = onCancel;
+    $('#adminKeyInput').onkeydown = (e) => { if (e.key === 'Enter') onConfirm(); };
+  });
+}
+
+function showToast(msg, isError = false) {
+  const t = $('#toast');
+  t.textContent = msg;
+  t.classList.toggle('error', isError);
+  t.classList.add('show');
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(() => t.classList.remove('show'), 2400);
+}
+function escapeHtml(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+async function hashPassword(pw) {
+  const data = new TextEncoder().encode(pw);
+  const buf = await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function genHostKey() {
+  const chars = 'abcdefghijkmnopqrstuvwxyz23456789';
+  let s = '';
+  const arr = new Uint8Array(20);
+  crypto.getRandomValues(arr);
+  for (let i = 0; i < 20; i++) s += chars[arr[i] % chars.length];
+  return s;
+}
+
+// ============================================================
+// 認証
+// ============================================================
+async function checkAuth() {
+  const storedHash = localStorage.getItem(PASSWORD_KEY);
+  const sessionToken = sessionStorage.getItem(AUTH_KEY);
+  if (!storedHash) {
+    $('#lockTitle').textContent = '初回パスワード設定';
+    $('#lockSub').textContent = 'この管理画面のパスワードを設定してください';
+    $('#lockInput').placeholder = '新しいパスワード（4文字以上）';
+    $('#lockBtn').textContent = '設定して開始';
+    $('#lockHint').innerHTML = '※忘れると復旧できません。安全な場所に保管してください。';
+    return false;
+  }
+  if (sessionToken === storedHash) return true;
+  $('#lockTitle').textContent = 'アクセスパスワード';
+  $('#lockSub').textContent = 'パスワードを入力してください';
+  $('#lockInput').placeholder = 'パスワード';
+  $('#lockBtn').textContent = 'ログイン';
+  $('#lockHint').innerHTML = '<a id="resetPwLink">パスワードをリセット</a>';
+  return false;
+}
+
+async function handleLockSubmit() {
+  const input = $('#lockInput');
+  const value = input.value;
+  if (!value) { input.focus(); return; }
+  const storedHash = localStorage.getItem(PASSWORD_KEY);
+  if (!storedHash) {
+    if (value.length < 8) { showToast('画面ロック用パスワードは8文字以上で設定してください', true); return; }
+    const h = await hashPassword(value);
+    localStorage.setItem(PASSWORD_KEY, h);
+    sessionStorage.setItem(AUTH_KEY, h);
+    enterApp();
+    showToast('パスワードを設定しました');
+    return;
+  }
+  const h = await hashPassword(value);
+  if (h === storedHash) {
+    sessionStorage.setItem(AUTH_KEY, storedHash);
+    enterApp();
+  } else {
+    input.classList.add('error');
+    setTimeout(() => input.classList.remove('error'), 400);
+    input.value = '';
+  }
+}
+
+function enterApp() {
+  $('#lockOverlay').classList.add('hidden');
+  $('#mainContainer').style.display = 'block';
+  loadEvents();
+}
+
+document.addEventListener('click', (e) => {
+  if (e.target.id === 'resetPwLink') {
+    e.preventDefault();
+    if (confirm('パスワードをリセットしますか？\n（このブラウザの認証情報のみ削除されます。Supabase上のイベントデータは削除されません）')) {
+      localStorage.removeItem(PASSWORD_KEY);
+      sessionStorage.removeItem(AUTH_KEY);
+      location.reload();
+    }
+  }
+});
+
+$('#lockBtn').addEventListener('click', handleLockSubmit);
+$('#lockInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') handleLockSubmit(); });
+
+// ============================================================
+// イベント一覧
+// ============================================================
+async function loadEvents() {
+  try {
+    const adminKey = await ensureAdminKey();
+    if (!adminKey) {
+      $('#activeEvents').innerHTML = `<div class="empty">管理キーが必要です。再読み込みしてください。</div>`;
+      $('#archivedEvents').innerHTML = '';
+      return;
+    }
+    const events = await DB.listEvents(adminKey);
+    const active = events.filter(e => e.status !== 'archived');
+    const archived = events.filter(e => e.status === 'archived');
+    renderEvents($('#activeEvents'), active);
+    renderEvents($('#archivedEvents'), archived);
+  } catch (err) {
+    console.error(err);
+    if ((err.message || '').includes('admin_unauthorized')) {
+      setAdminKey('');
+      showToast('管理キーが無効です。再入力してください', true);
+      setTimeout(loadEvents, 500);
+    } else {
+      showToast('一覧取得失敗：' + (err.message || ''), true);
+    }
+  }
+}
+
+function renderEvents(container, events) {
+  if (events.length === 0) {
+    container.innerHTML = `<div class="empty">イベントはありません</div>`;
+    return;
+  }
+  container.innerHTML = events.map(e => `
+    <div class="event-card">
+      <div class="event-card__main">
+        <div class="event-card__name">${escapeHtml(e.name)}</div>
+        <div class="event-card__meta">
+          <span class="event-card__status event-card__status--${e.status}">${(e.status || 'draft').toUpperCase()}</span>
+          <span>ID: ${escapeHtml(e.id)}</span>
+          ${e.theme ? `<span>テーマ: ${escapeHtml(e.theme)}</span>` : ''}
+        </div>
+      </div>
+      <div class="event-card__actions">
+        <button class="btn btn--ghost btn--sm" data-show-url="${escapeHtml(e.id)}">URL</button>
+        <button class="btn btn--ghost btn--sm" data-open-admin="${escapeHtml(e.id)}">管理</button>
+        <button class="btn btn--ghost btn--sm" data-delete="${escapeHtml(e.id)}" data-name="${escapeHtml(e.name)}" style="color:var(--red);">削除</button>
+      </div>
+    </div>
+  `).join('');
+
+  container.querySelectorAll('[data-show-url]').forEach(b => {
+    b.addEventListener('click', () => {
+      const event = events.find(e => e.id === b.dataset.showUrl);
+      showUrlModal(event, '');  // 既存イベントはhost_keyを表示しない
+    });
+  });
+  container.querySelectorAll('[data-open-admin]').forEach(b => {
+    b.addEventListener('click', () => {
+      const baseUrl = location.href.replace(/\/[^\/]*(\?.*)?$/, '');
+      const url = `${baseUrl}/admin.html?event=${encodeURIComponent(b.dataset.openAdmin)}`;
+      window.open(url, '_blank');
+    });
+  });
+  container.querySelectorAll('[data-delete]').forEach(b => {
+    b.addEventListener('click', () => openDeleteModal(b.dataset.delete, b.dataset.name));
+  });
+}
+
+// ============================================================
+// 新規作成
+// ============================================================
+$('#newEventBtn').addEventListener('click', () => {
+  $('#newName').value = '';
+  $('#newId').value = '';
+  $('#newTheme').value = '家族の思い出';
+  $('#newHostKey').value = genHostKey();
+  $('#createModal').classList.add('show');
+  setTimeout(() => $('#newName').focus(), 100);
+});
+$('#genHostKeyBtn').addEventListener('click', () => { $('#newHostKey').value = genHostKey(); });
+$('#createCancel').addEventListener('click', () => $('#createModal').classList.remove('show'));
+$('#newId').addEventListener('input', (e) => {
+  e.target.value = e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, '');
+});
+
+$('#createConfirm').addEventListener('click', async () => {
+  const name = $('#newName').value.trim();
+  const id = $('#newId').value.trim();
+  const theme = $('#newTheme').value.trim();
+  const hostKey = $('#newHostKey').value.trim();
+  if (!name) return showToast('イベント名を入力してください', true);
+  if (!id || !/^[a-z0-9_-]+$/.test(id)) return showToast('IDは半角英数字とハイフン・アンダースコアのみ', true);
+  if (hostKey.length < 8) return showToast('host_keyは8文字以上必要です', true);
+
+  const btn = $('#createConfirm');
+  btn.disabled = true; btn.textContent = '作成中...';
+  try {
+    const adminKey = await ensureAdminKey();
+    if (!adminKey) { btn.disabled = false; btn.textContent = '作成'; return; }
+    await DB.createEvent({ id, name, hostKey, adminKey, theme });
+    $('#createModal').classList.remove('show');
+    showUrlModal({ id, name }, hostKey);
+    await loadEvents();
+    showToast('イベント作成完了');
+  } catch (err) {
+    console.error(err);
+    const m = err.message || '';
+    if (m.includes('admin_unauthorized')) {
+      setAdminKey('');
+      showToast('管理キーが無効です。再入力してください', true);
+    }
+    else if (m.includes('event_id_taken')) showToast('このイベントIDは既に使われています', true);
+    else if (m.includes('host_key_too_short')) showToast('host_keyが短すぎます', true);
+    else showToast('作成失敗：' + m, true);
+  } finally {
+    btn.disabled = false; btn.textContent = '作成';
+  }
+});
+
+function showUrlModal(event, hostKey) {
+  const baseUrl = location.href.replace(/\/[^\/]*(\?.*)?$/, '');
+  const partUrl = `${baseUrl}/index.html?event=${encodeURIComponent(event.id)}`;
+  const hostUrl = hostKey
+    ? `${baseUrl}/admin.html?event=${encodeURIComponent(event.id)}&key=${encodeURIComponent(hostKey)}`
+    : `${baseUrl}/admin.html?event=${encodeURIComponent(event.id)}`;
+  $('#urlTitle').textContent = event.name;
+  $('#urlParticipant').textContent = partUrl;
+  $('#urlHost').textContent = hostUrl;
+  $('#urlHostKey').textContent = hostKey || '（既存イベントは host_key を表示しません）';
+  $('#urlOpenAdmin').href = hostUrl;
+  $('#urlModal').classList.add('show');
+}
+$('#urlClose').addEventListener('click', () => $('#urlModal').classList.remove('show'));
+
+$$('[data-copy]').forEach(b => {
+  b.addEventListener('click', () => {
+    const text = $('#' + b.dataset.copy).textContent;
+    if (navigator.clipboard) navigator.clipboard.writeText(text).then(() => showToast('コピーしました'));
+  });
+});
+
+// ============================================================
+// 削除
+// ============================================================
+function openDeleteModal(eventId, eventName) {
+  $('#deleteEventName').textContent = `「${eventName}」と一致させてください`;
+  $('#deleteConfirmInput').value = '';
+  $('#deleteConfirmInput').placeholder = eventName;
+  $('#deleteHostKey').value = '';
+  $('#deleteModal').classList.add('show');
+
+  const onOk = async () => {
+    const confirmName = $('#deleteConfirmInput').value.trim();
+    const hostKey = $('#deleteHostKey').value.trim();
+    if (confirmName !== eventName) return showToast('イベント名が一致しません', true);
+    if (!hostKey) return showToast('host_keyを入力してください', true);
+    const btn = $('#deleteConfirm');
+    btn.disabled = true;
+    try {
+      await DB.hostDeleteEvent(eventId, hostKey, confirmName);
+      $('#deleteModal').classList.remove('show');
+      showToast('削除しました');
+      await loadEvents();
+    } catch (err) {
+      const m = err.message || '';
+      if (m.includes('unauthorized')) showToast('host_keyが正しくありません', true);
+      else if (m.includes('name_mismatch')) showToast('イベント名が一致しません', true);
+      else showToast('削除失敗：' + m, true);
+    } finally {
+      btn.disabled = false;
+    }
+    $('#deleteConfirm').onclick = null;
+  };
+  $('#deleteConfirm').onclick = onOk;
+  $('#deleteCancel').onclick = () => {
+    $('#deleteModal').classList.remove('show');
+    $('#deleteConfirm').onclick = null;
+  };
+}
+
+// ============================================================
+// パスワード変更
+// ============================================================
+$('#settingsBtn').addEventListener('click', () => {
+  $('#newPassword').value = '';
+  $('#settingsModal').classList.add('show');
+});
+$('#settingsCancel').addEventListener('click', () => $('#settingsModal').classList.remove('show'));
+$('#settingsSave').addEventListener('click', async () => {
+  const pw = $('#newPassword').value;
+  if (!pw) return showToast('新しいパスワードを入力してください', true);
+  if (pw.length < 8) return showToast('画面ロック用パスワードは8文字以上で設定してください', true);
+  const h = await hashPassword(pw);
+  localStorage.setItem(PASSWORD_KEY, h);
+  sessionStorage.setItem(AUTH_KEY, h);
+  $('#settingsModal').classList.remove('show');
+  showToast('パスワードを変更しました');
+});
+
+$('#logoutBtn').addEventListener('click', () => {
+  if (confirm('ログアウトしますか？')) {
+    sessionStorage.removeItem(AUTH_KEY);
+    location.reload();
+  }
+});
+
+// 起動
+(async () => {
+  const ok = await checkAuth();
+  if (ok) enterApp();
+  else $('#lockInput').focus();
+})();
+</script>
+</body>
+</html>

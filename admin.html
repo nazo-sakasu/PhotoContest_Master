@@ -1,0 +1,1129 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>管理画面 | フォトコンテスト</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;700;800&family=Noto+Sans+JP:wght@500;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="db.js"></script>
+<style>
+:root{
+  --sea:#0a3d52;--sand:#f5ede0;--sand-2:#ede2cd;
+  --foam:#faf6ec;--ink:#15171c;--ink-2:#2c4250;--ink-3:#6c7d8a;
+  --coral:#d65a3a;--gold:#c8951f;
+  --line:rgba(21,23,28,0.1);
+  --r:12px;--r-lg:18px;
+  --shadow-md:0 4px 12px rgba(10,31,42,0.1);
+  --green:#3a9d5d;
+  --red:#c44569;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  background:var(--sand);color:var(--ink);
+  font-family:'Noto Sans JP',sans-serif;font-weight:500;
+  -webkit-font-smoothing:antialiased;
+  min-height:100vh;
+}
+.container{max-width:1200px;margin:0 auto;padding:20px;}
+@media(max-width:760px){.container{padding:14px}}
+
+/* ヘッダー */
+.header{
+  display:flex;justify-content:space-between;align-items:center;
+  padding-bottom:16px;border-bottom:2px solid var(--ink);margin-bottom:20px;
+  flex-wrap:wrap;gap:10px;
+}
+.header__title{font-size:18px;font-weight:800;letter-spacing:0.04em}
+.header__title small{display:block;font-size:10px;color:var(--ink-3);font-weight:700;letter-spacing:0.18em;margin-top:2px}
+.header__pills{display:flex;gap:6px;flex-wrap:wrap}
+.pill{
+  padding:5px 11px;font-size:11px;font-weight:700;
+  border-radius:100px;letter-spacing:0.04em;
+}
+.pill.draft{background:var(--ink-3);color:white}
+.pill.active{background:var(--coral);color:white}
+.pill.archived{background:var(--sand-2);color:var(--ink-3)}
+.pill.green{background:var(--green);color:white}
+.pill.red{background:var(--red);color:white}
+.pill.gold{background:var(--gold);color:white}
+
+/* グリッド */
+.grid{display:grid;grid-template-columns:1fr 380px;gap:20px}
+@media(max-width:1023px){.grid{grid-template-columns:1fr}}
+
+/* セクション */
+.section{
+  background:var(--foam);border-radius:var(--r-lg);
+  padding:18px;margin-bottom:14px;
+}
+.section__h{
+  font-size:13px;font-weight:800;letter-spacing:0.06em;
+  margin-bottom:12px;display:flex;align-items:center;gap:8px;
+  padding-bottom:8px;border-bottom:1px solid var(--line);
+}
+.section__h::before{content:'';width:4px;height:16px;background:var(--coral);border-radius:2px}
+
+/* 統計 */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-bottom:14px}
+.stat{
+  background:var(--sand-2);border-radius:var(--r);padding:10px 12px;
+}
+.stat__label{font-size:10px;font-weight:700;color:var(--ink-3);letter-spacing:0.1em;margin-bottom:3px}
+.stat__value{font-family:'Inter',sans-serif;font-size:22px;font-weight:800;line-height:1;color:var(--ink)}
+.stat__sub{font-size:10px;color:var(--ink-3);margin-top:3px}
+
+/* フォーム要素 */
+.row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line);gap:10px}
+.row:last-child{border-bottom:none}
+.row__label{font-size:13px;font-weight:600;color:var(--ink-2);flex:1;min-width:0}
+.row__hint{font-size:11px;color:var(--ink-3);margin-top:2px}
+.row__actions{display:flex;gap:6px;align-items:center}
+
+.input,.select,.textarea{
+  width:100%;background:white;border:1px solid var(--line);
+  border-radius:var(--r);padding:9px 11px;
+  font-family:inherit;font-size:13px;color:var(--ink);outline:none;
+}
+.input:focus,.select:focus,.textarea:focus{border-color:var(--coral)}
+.input--num{width:80px;text-align:center}
+.input--time{width:auto;min-width:160px}
+
+.toggle{position:relative;display:inline-block;width:42px;height:24px;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0}
+.toggle__slider{
+  position:absolute;cursor:pointer;inset:0;background:var(--ink-3);
+  border-radius:100px;transition:0.2s;
+}
+.toggle__slider::before{
+  content:'';position:absolute;width:18px;height:18px;
+  background:white;border-radius:50%;top:3px;left:3px;transition:0.2s;
+}
+.toggle input:checked+.toggle__slider{background:var(--coral)}
+.toggle input:checked+.toggle__slider::before{left:21px}
+
+/* ボタン */
+.btn{
+  background:var(--ink);color:var(--foam);border:none;
+  padding:9px 14px;font-family:inherit;font-size:12px;font-weight:700;
+  cursor:pointer;border-radius:var(--r);transition:all 0.2s;
+  display:inline-flex;align-items:center;gap:5px;
+}
+.btn:hover{background:var(--coral)}
+.btn:disabled{opacity:0.5;cursor:not-allowed}
+.btn--ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.btn--ghost:hover{background:var(--sand-2);color:var(--ink);border-color:var(--ink)}
+.btn--coral{background:var(--coral)}
+.btn--coral:hover{background:#b94a30}
+.btn--red{background:var(--red);color:white}
+.btn--red:hover{background:#a13959}
+.btn--green{background:var(--green);color:white}
+.btn--green:hover{background:#2d7a47}
+.btn--full{width:100%;justify-content:center;padding:11px}
+
+/* 写真リスト */
+.photos{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
+.photo-card{
+  background:white;border-radius:var(--r);overflow:hidden;
+  position:relative;border:1px solid var(--line);
+}
+.photo-card.hidden-status{opacity:0.5}
+.photo-card.has-reports{border:2px solid var(--coral)}
+.photo-card img{width:100%;aspect-ratio:1;object-fit:cover;display:block}
+.photo-card__body{padding:8px}
+.photo-card__name{font-size:11px;font-weight:700;color:var(--ink);margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.photo-card__stats{font-size:10px;color:var(--ink-3);display:flex;gap:8px;margin-bottom:6px}
+.photo-card__actions{display:flex;gap:4px}
+.photo-card__btn{
+  flex:1;padding:5px;border:1px solid var(--line);
+  background:transparent;font-family:inherit;font-size:10px;
+  font-weight:700;cursor:pointer;border-radius:6px;
+}
+.photo-card__btn:hover{background:var(--sand-2)}
+.photo-card__btn.danger{color:var(--red);border-color:var(--red)}
+.photo-card__badge{
+  position:absolute;top:6px;right:6px;
+  background:var(--coral);color:white;
+  font-size:10px;font-weight:800;padding:3px 7px;border-radius:100px;
+}
+
+/* 通報リスト */
+.report-item{
+  background:white;border-radius:var(--r);padding:10px 12px;
+  margin-bottom:8px;border:1px solid var(--line);
+}
+.report-item__head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.report-item__id{font-family:'Inter',sans-serif;font-size:10px;color:var(--ink-3);font-weight:600}
+.report-item__status{font-size:10px;font-weight:700;padding:2px 7px;border-radius:100px}
+.report-item__status.pending{background:var(--coral);color:white}
+.report-item__status.resolved{background:var(--ink-3);color:white}
+.report-item__body{font-size:12px;color:var(--ink-2);margin-bottom:6px}
+.report-item__actions{display:flex;gap:6px}
+
+/* 進行コントロール */
+.flow-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:6px}
+.flow-btn{
+  padding:11px 8px;background:white;border:1px solid var(--line);
+  font-family:inherit;font-size:12px;font-weight:700;
+  cursor:pointer;border-radius:var(--r);transition:all 0.2s;
+}
+.flow-btn:hover{background:var(--sand-2);border-color:var(--ink)}
+.flow-btn.active{background:var(--ink);color:white;border-color:var(--ink)}
+
+/* タブ */
+.subtabs{display:flex;gap:4px;margin-bottom:12px;border-bottom:1px solid var(--line)}
+.subtab{
+  padding:9px 14px;background:transparent;border:none;
+  font-family:inherit;font-size:12px;font-weight:700;color:var(--ink-3);
+  cursor:pointer;border-bottom:2px solid transparent;
+}
+.subtab.active{color:var(--ink);border-bottom-color:var(--coral)}
+
+/* 認証画面 */
+.auth-overlay{
+  position:fixed;inset:0;background:var(--sea);z-index:200;
+  display:flex;align-items:center;justify-content:center;padding:20px;
+}
+.auth-overlay.hidden{display:none}
+.auth-card{
+  background:var(--sand);border-radius:var(--r-lg);
+  padding:32px 24px;width:100%;max-width:380px;text-align:center;
+}
+.auth-card__icon{font-size:42px;margin-bottom:12px}
+.auth-card__title{font-size:18px;font-weight:800;margin-bottom:6px}
+.auth-card__sub{font-size:12px;color:var(--ink-3);margin-bottom:18px;line-height:1.6}
+.auth-card__input{
+  width:100%;padding:13px;background:white;border:2px solid transparent;
+  border-radius:var(--r);font-family:inherit;font-size:15px;text-align:center;
+  letter-spacing:0.1em;margin-bottom:10px;
+}
+.auth-card__input.error{border-color:var(--red);animation:shake 0.3s}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+
+/* モーダル */
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(10,31,42,0.7);
+  z-index:150;display:none;align-items:center;justify-content:center;padding:18px;
+}
+.modal-overlay.show{display:flex}
+.modal{
+  background:var(--sand);border-radius:var(--r-lg);
+  padding:24px;width:100%;max-width:420px;max-height:90vh;overflow-y:auto;
+}
+.modal__title{font-size:16px;font-weight:800;margin-bottom:6px}
+.modal__sub{font-size:12px;color:var(--ink-3);margin-bottom:14px;line-height:1.6}
+.modal__field{margin-bottom:12px}
+.modal__field label{display:block;font-size:12px;font-weight:700;margin-bottom:4px;color:var(--ink-2)}
+.modal__actions{display:flex;gap:8px;margin-top:16px}
+.modal__actions .btn{flex:1;justify-content:center;padding:11px}
+
+/* トースト */
+.toast{
+  position:fixed;bottom:30px;left:50%;transform:translateX(-50%);
+  background:var(--ink);color:var(--foam);padding:10px 22px;
+  border-radius:100px;font-size:13px;font-weight:600;z-index:300;
+  opacity:0;pointer-events:none;transition:opacity 0.3s;
+  box-shadow:var(--shadow-md);
+}
+.toast.show{opacity:1}
+.toast.error{background:var(--coral)}
+
+/* URL欄 */
+.url-row{
+  background:white;border-radius:var(--r);padding:10px;
+  display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;
+  margin-bottom:6px;font-size:11px;
+}
+.url-row__label{font-weight:700;font-size:10px;color:var(--ink-3);letter-spacing:0.1em}
+.url-row__url{font-family:'Inter',sans-serif;font-size:11px;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.url-row__btn{
+  padding:5px 11px;background:var(--ink);color:var(--foam);
+  border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;
+}
+
+/* QRコード表示用 */
+.qr-modal-img{width:240px;height:240px;background:white;padding:12px;border-radius:var(--r);margin:0 auto}
+</style>
+</head>
+<body>
+
+<!-- 認証画面 -->
+<div class="auth-overlay" id="authOverlay">
+  <div class="auth-card">
+    <div class="auth-card__icon">🔒</div>
+    <div class="auth-card__title">ホスト認証</div>
+    <div class="auth-card__sub">このイベントの管理キー（host_key）を入力してください</div>
+    <input type="password" class="auth-card__input" id="authInput" placeholder="host_key">
+    <button class="btn btn--full" id="authBtn">ログイン</button>
+  </div>
+</div>
+
+<div class="container" id="mainContainer" style="display:none;">
+
+  <header class="header">
+    <div class="header__title">
+      <span id="eventName">—</span>
+      <small>HOST CONTROL</small>
+    </div>
+    <div class="header__pills">
+      <span class="pill" id="statusPill">—</span>
+      <span class="pill" id="phasePill">—</span>
+      <span class="pill" id="commentPill" style="display:none;">💬 コメントON</span>
+      <span class="pill" id="regNumberPill" style="display:none;">🔢 登録番号ON</span>
+      <span class="pill" id="retentionPill" style="display:none;">🗑️ 自動削除</span>
+    </div>
+  </header>
+
+  <!-- 統計 -->
+  <div class="stats" id="statsRow"></div>
+
+  <!-- メインコンテンツ -->
+  <div class="grid">
+
+    <!-- 左：写真・通報 -->
+    <div>
+      <div class="section">
+        <div class="section__h">
+          <span>写真管理</span>
+          <span style="margin-left:auto;font-size:11px;font-weight:600;color:var(--ink-3);" id="photosCount">0件</span>
+        </div>
+        <div class="subtabs">
+          <button class="subtab active" data-subtab="photos">写真一覧</button>
+          <button class="subtab" data-subtab="reports">通報 <span id="reportBadge" style="display:none;background:var(--coral);color:white;font-size:9px;padding:1px 6px;border-radius:100px;margin-left:3px;">0</span></button>
+          <button class="subtab" data-subtab="logs">ログ</button>
+        </div>
+        <div id="subview-photos">
+          <div class="photos" id="photosGrid"></div>
+        </div>
+        <div id="subview-reports" style="display:none;">
+          <div id="reportsList"></div>
+        </div>
+        <div id="subview-logs" style="display:none;">
+          <div id="logsList" style="font-size:11px;color:var(--ink-2);font-family:'Inter',sans-serif;line-height:1.7;max-height:400px;overflow-y:auto;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 右：設定・進行 -->
+    <div>
+
+      <!-- URL -->
+      <div class="section">
+        <div class="section__h">URL・QR</div>
+        <div class="url-row">
+          <div>
+            <div class="url-row__label">📱 参加者用</div>
+            <div class="url-row__url" id="participantUrl">—</div>
+          </div>
+          <button class="url-row__btn" data-copy="participantUrl">コピー</button>
+        </div>
+        <button class="btn btn--ghost btn--full" id="qrBtn" style="margin-top:8px;">📷 QRコード表示</button>
+      </div>
+
+      <!-- 進行 -->
+      <div class="section">
+        <div class="section__h">イベント進行</div>
+        <div class="flow-grid">
+          <button class="flow-btn" data-status="draft">下書き</button>
+          <button class="flow-btn" data-status="active">公開</button>
+          <button class="flow-btn" data-status="archived">アーカイブ</button>
+          <button class="flow-btn" id="resultPreviewBtn">結果プレビュー</button>
+        </div>
+      </div>
+
+      <!-- 期間設定 -->
+      <div class="section">
+        <div class="section__h">受付期間</div>
+        <div class="row">
+          <div>
+            <div class="row__label">投稿開始</div>
+          </div>
+          <input type="datetime-local" class="input input--time" id="uploadStart">
+        </div>
+        <div class="row">
+          <div>
+            <div class="row__label">投稿終了</div>
+          </div>
+          <input type="datetime-local" class="input input--time" id="uploadEnd">
+        </div>
+        <div class="row">
+          <div>
+            <div class="row__label">投票開始</div>
+          </div>
+          <input type="datetime-local" class="input input--time" id="voteStart">
+        </div>
+        <div class="row">
+          <div>
+            <div class="row__label">投票終了</div>
+          </div>
+          <input type="datetime-local" class="input input--time" id="voteEnd">
+        </div>
+        <div class="row">
+          <div>
+            <div class="row__label">イベント終了</div>
+            <div class="row__hint">自動削除の起算日</div>
+          </div>
+          <input type="datetime-local" class="input input--time" id="endsAt">
+        </div>
+        <button class="btn btn--full" id="saveScheduleBtn" style="margin-top:8px;">期間を保存</button>
+      </div>
+
+      <!-- 機能ON/OFF -->
+      <div class="section">
+        <div class="section__h">機能設定</div>
+        <div class="row">
+          <div>
+            <div class="row__label">登録番号</div>
+            <div class="row__hint">受付で番号を伝える運用</div>
+          </div>
+          <label class="toggle"><input type="checkbox" id="enableRegNumber"><span class="toggle__slider"></span></label>
+        </div>
+        <div class="row" id="regLabelRow" style="display:none;">
+          <div>
+            <div class="row__label">登録番号ラベル</div>
+          </div>
+          <input type="text" class="input" id="regLabel" placeholder="登録番号" maxlength="20" style="max-width:160px;">
+        </div>
+        <div class="row">
+          <div>
+            <div class="row__label">電話番号取得</div>
+          </div>
+          <label class="toggle"><input type="checkbox" id="reqPhone"><span class="toggle__slider"></span></label>
+        </div>
+        <div class="row">
+          <div>
+            <div class="row__label">社員番号取得</div>
+          </div>
+          <label class="toggle"><input type="checkbox" id="reqEmployeeId"><span class="toggle__slider"></span></label>
+        </div>
+        <div class="row">
+          <div>
+            <div class="row__label">メールアドレス取得</div>
+          </div>
+          <label class="toggle"><input type="checkbox" id="reqEmail"><span class="toggle__slider"></span></label>
+        </div>
+        <div class="row">
+          <div>
+            <div class="row__label">コメント機能</div>
+            <div class="row__hint">初期OFF推奨</div>
+          </div>
+          <label class="toggle"><input type="checkbox" id="enableComments"><span class="toggle__slider"></span></label>
+        </div>
+        <div class="row">
+          <div>
+            <div class="row__label">いいね数の表示</div>
+          </div>
+          <label class="toggle"><input type="checkbox" id="showLikeCount" checked><span class="toggle__slider"></span></label>
+        </div>
+        <div class="row">
+          <div>
+            <div class="row__label">投稿数上限</div>
+            <div class="row__hint">1人あたり</div>
+          </div>
+          <input type="number" class="input input--num" id="maxUploads" min="1" max="20">
+        </div>
+        <div class="row">
+          <div>
+            <div class="row__label">通報自動非表示</div>
+            <div class="row__hint">通報数で自動非表示。0で無効</div>
+          </div>
+          <input type="number" class="input input--num" id="autoHideThreshold" min="0" max="50">
+        </div>
+        <div class="row">
+          <div>
+            <div class="row__label">背景テーマ</div>
+            <div class="row__hint">参加者画面の配色</div>
+          </div>
+          <select class="select" id="themePreset" style="max-width:180px;">
+            <option value="aquarium">水族館ブルー</option>
+            <option value="family">ファミリー暖色</option>
+            <option value="corporate">企業イベントシンプル</option>
+            <option value="spring">春フェス</option>
+            <option value="night">ナイトイベント</option>
+          </select>
+        </div>
+        <button class="btn btn--full" id="saveSettingsBtn" style="margin-top:8px;">機能設定を保存</button>
+      </div>
+
+      <!-- データ管理 -->
+      <div class="section">
+        <div class="section__h">データ管理</div>
+        <div class="row">
+          <div>
+            <div class="row__label">自動削除モード</div>
+          </div>
+          <select class="select" id="retentionMode" style="max-width:160px;">
+            <option value="manual">手動削除</option>
+            <option value="auto10">10日後自動</option>
+            <option value="auto30">30日後自動</option>
+          </select>
+        </div>
+        <div class="row" style="display:block;">
+          <div class="row__label" style="margin-bottom:8px;">プライバシーポリシーURL</div>
+          <input type="url" class="input" id="privacyUrl" placeholder="https://...">
+          <label style="display:flex;align-items:center;gap:6px;margin-top:6px;font-size:11px;">
+            <input type="checkbox" id="showPrivacyUrl" checked> 参加者に表示
+          </label>
+        </div>
+        <div class="row" style="display:block;">
+          <div class="row__label" style="margin-bottom:8px;">利用規約URL</div>
+          <input type="url" class="input" id="termsUrl" placeholder="https://...">
+          <label style="display:flex;align-items:center;gap:6px;margin-top:6px;font-size:11px;">
+            <input type="checkbox" id="showTermsUrl" checked> 参加者に表示
+          </label>
+        </div>
+        <button class="btn btn--full" id="saveDataBtn" style="margin-top:8px;">データ設定を保存</button>
+
+        <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--line)">
+          <button class="btn btn--ghost btn--full" id="exportCsvBtn">📊 CSV出力（識別情報なし）</button>
+          <button class="btn btn--coral btn--full" id="exportCsvWithIdsBtn" style="margin-top:6px;">⚠️ CSV出力（識別情報あり）</button>
+          <button class="btn btn--coral btn--full" id="clearPiiBtn" style="margin-top:6px;">🗑 個人情報を今すぐ削除</button>
+          <button class="btn btn--red btn--full" id="cleanupBtn" style="margin-top:6px;">⚠️ 全データクリーンアップ</button>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+
+<!-- QRモーダル -->
+<div class="modal-overlay" id="qrModal">
+  <div class="modal" style="max-width:340px;text-align:center;">
+    <div class="modal__title">参加者用QRコード</div>
+    <div class="modal__sub">参加者にこのQRを配布してください</div>
+    <div id="qrCanvas" class="qr-modal-img"></div>
+    <div class="modal__actions">
+      <button class="btn btn--ghost" id="qrClose">閉じる</button>
+      <button class="btn" id="qrDownload">画像保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 削除確認モーダル -->
+<div class="modal-overlay" id="confirmModal">
+  <div class="modal">
+    <div class="modal__title" id="confirmTitle">確認</div>
+    <div class="modal__sub" id="confirmSub"></div>
+    <div class="modal__field" id="confirmField" style="display:none;">
+      <label id="confirmLabel">確認のため入力してください</label>
+      <input type="text" class="input" id="confirmInput">
+    </div>
+    <div class="modal__field" id="reasonField" style="display:none;">
+      <label>理由（任意）</label>
+      <input type="text" class="input" id="reasonInput" placeholder="例：個人情報が写りこんでいる">
+    </div>
+    <div class="modal__actions">
+      <button class="btn btn--ghost" id="confirmCancel">キャンセル</button>
+      <button class="btn btn--red" id="confirmOk">実行</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- QRコード生成ライブラリ -->
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+<script>
+'use strict';
+
+const $ = (s) => document.querySelector(s);
+const $$ = (s) => document.querySelectorAll(s);
+
+const params = new URLSearchParams(location.search);
+const EVENT_ID = params.get('event');
+let HOST_KEY = params.get('key') || '';
+
+const state = {
+  event: null,
+  photos: [],
+  reports: [],
+  logs: [],
+  currentSubtab: 'photos',
+};
+
+function showToast(msg, isError = false) {
+  const t = $('#toast');
+  t.textContent = msg;
+  t.classList.toggle('error', isError);
+  t.classList.add('show');
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+function escapeHtml(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function fmtDateTimeLocal(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function fmtDateTime(iso) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleString('ja-JP', { hour12: false });
+}
+
+function errMsg(err) {
+  const m = (err && err.message) || '';
+  if (m.includes('unauthorized')) return 'ホスト認証エラー（host_keyが正しくありません）';
+  if (m.includes('event_not_found')) return 'イベントが見つかりません';
+  if (m.includes('name_mismatch')) return 'イベント名が一致しません';
+  if (m.includes('host_key_too_short')) return 'host_keyは8文字以上必要です';
+  return m || 'エラーが発生しました';
+}
+
+// ============================================================
+// 認証
+// ============================================================
+async function tryAuth(key) {
+  // 試しにhost_list_reportsを叩いて検証
+  try {
+    await DB.hostListReports(EVENT_ID, key);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+$('#authBtn').addEventListener('click', async () => {
+  const key = $('#authInput').value.trim();
+  if (!key) return;
+  const ok = await tryAuth(key);
+  if (ok) {
+    HOST_KEY = key;
+    $('#authOverlay').classList.add('hidden');
+    $('#mainContainer').style.display = 'block';
+    init();
+  } else {
+    $('#authInput').classList.add('error');
+    setTimeout(() => $('#authInput').classList.remove('error'), 400);
+    $('#authInput').value = '';
+  }
+});
+$('#authInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('#authBtn').click(); });
+
+// ============================================================
+// 初期化
+// ============================================================
+async function init() {
+  try {
+    state.event = await DB.hostGetEvent(EVENT_ID, HOST_KEY);
+    if (!state.event) { showToast('イベントが見つかりません', true); return; }
+
+    renderHeader();
+    renderSettings();
+    await refreshAll();
+
+    // タブ
+    $$('.subtab').forEach(t => t.addEventListener('click', () => switchSubtab(t.dataset.subtab)));
+
+    // Realtime
+    DB.subscribeEvent(EVENT_ID, {
+      onPhotoChange: () => loadPhotos(),
+      onLikeChange: () => loadPhotos(),
+      onCommentChange: () => loadPhotos(),
+      onEventChange: async () => {
+        state.event = await DB.hostGetEvent(EVENT_ID, HOST_KEY);
+        renderHeader();
+      },
+    });
+  } catch (err) {
+    console.error(err);
+    showToast(errMsg(err), true);
+  }
+}
+
+async function refreshAll() {
+  await Promise.all([loadPhotos(), loadReports()]);
+  renderStats();
+}
+
+// ============================================================
+// ヘッダー描画
+// ============================================================
+function renderHeader() {
+  const ev = state.event;
+  $('#eventName').textContent = ev.name || '—';
+
+  const sp = $('#statusPill');
+  sp.className = 'pill ' + (ev.status || 'draft');
+  sp.textContent = ev.status === 'active' ? '公開中' : ev.status === 'archived' ? 'アーカイブ' : '下書き';
+
+  // フェーズ判定
+  const now = new Date();
+  let phase = '—';
+  if (ev.upload_start_at && now < new Date(ev.upload_start_at)) phase = '開始前';
+  else if (ev.upload_end_at && now > new Date(ev.upload_end_at)) {
+    if (ev.vote_end_at && now < new Date(ev.vote_end_at)) phase = '投票中';
+    else phase = '結果発表';
+  } else if (ev.upload_start_at) phase = '投稿受付中';
+  $('#phasePill').textContent = phase;
+  $('#phasePill').className = 'pill green';
+
+  $('#commentPill').style.display = ev.enable_comments ? 'inline-block' : 'none';
+  $('#regNumberPill').style.display = ev.enable_registration_number ? 'inline-block' : 'none';
+  $('#retentionPill').style.display = ev.retention_mode !== 'manual' ? 'inline-block' : 'none';
+  $('#retentionPill').textContent = ev.retention_mode === 'auto10' ? '🗑️ 10日自動' : ev.retention_mode === 'auto30' ? '🗑️ 30日自動' : '';
+
+  // 参加者用URL
+  const baseUrl = location.href.replace(/\/[^\/]*(\?.*)?$/, '');
+  $('#participantUrl').textContent = `${baseUrl}/index.html?event=${encodeURIComponent(EVENT_ID)}`;
+}
+
+// ============================================================
+// 設定画面初期値
+// ============================================================
+function renderSettings() {
+  const ev = state.event;
+  $('#uploadStart').value = fmtDateTimeLocal(ev.upload_start_at);
+  $('#uploadEnd').value = fmtDateTimeLocal(ev.upload_end_at);
+  $('#voteStart').value = fmtDateTimeLocal(ev.vote_start_at);
+  $('#voteEnd').value = fmtDateTimeLocal(ev.vote_end_at);
+  $('#endsAt').value = fmtDateTimeLocal(ev.ends_at);
+
+  $('#enableRegNumber').checked = !!ev.enable_registration_number;
+  $('#regLabel').value = ev.registration_label || '登録番号';
+  $('#regLabelRow').style.display = ev.enable_registration_number ? 'flex' : 'none';
+  $('#reqPhone').checked = !!ev.require_phone;
+  $('#reqEmployeeId').checked = !!ev.require_employee_id;
+  $('#reqEmail').checked = !!ev.require_email;
+  $('#enableComments').checked = !!ev.enable_comments;
+  $('#showLikeCount').checked = ev.show_like_count !== false;
+  $('#themePreset').value = ev.theme_preset || 'aquarium';
+  $('#maxUploads').value = ev.max_uploads_per_user || 5;
+  $('#autoHideThreshold').value = ev.auto_hide_report_threshold || 0;
+  $('#retentionMode').value = ev.retention_mode || 'manual';
+  $('#privacyUrl').value = ev.privacy_policy_url || '';
+  $('#termsUrl').value = ev.terms_url || '';
+  $('#showPrivacyUrl').checked = ev.show_privacy_url !== false;
+  $('#showTermsUrl').checked = ev.show_terms_url !== false;
+
+  $('#enableRegNumber').addEventListener('change', (e) => {
+    $('#regLabelRow').style.display = e.target.checked ? 'flex' : 'none';
+  });
+}
+
+// ============================================================
+// データ読込
+// ============================================================
+async function loadPhotos() {
+  try {
+    state.photos = await DB.hostListPhotosWithIdentifiers(EVENT_ID, HOST_KEY);
+    renderPhotos();
+    renderStats();
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+async function loadReports() {
+  try {
+    state.reports = await DB.hostListReports(EVENT_ID, HOST_KEY);
+    renderReports();
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+// ============================================================
+// 統計
+// ============================================================
+function renderStats() {
+  const photos = state.photos || [];
+  const active = photos.filter(p => p.status === 'active').length;
+  const hidden = photos.filter(p => p.status === 'hidden').length;
+  const totalLikes = photos.reduce((s, p) => s + Number(p.like_count || 0), 0);
+  const pendingReports = (state.reports || []).filter(r => r.status === 'pending').length;
+  const totalReports = (state.reports || []).length;
+
+  $('#statsRow').innerHTML = `
+    <div class="stat"><div class="stat__label">PHOTOS</div><div class="stat__value">${active}</div><div class="stat__sub">非表示${hidden}件</div></div>
+    <div class="stat"><div class="stat__label">LIKES</div><div class="stat__value">${totalLikes}</div></div>
+    <div class="stat"><div class="stat__label">REPORTS</div><div class="stat__value">${pendingReports}</div><div class="stat__sub">未対応 / 全${totalReports}件</div></div>
+    <div class="stat"><div class="stat__label">参加</div><div class="stat__value">${new Set(photos.map(p => p.photo_id.split('_')[0])).size || 0}</div></div>
+  `;
+  $('#photosCount').textContent = `${active}件`;
+  if (pendingReports > 0) {
+    $('#reportBadge').style.display = 'inline-block';
+    $('#reportBadge').textContent = pendingReports;
+  } else {
+    $('#reportBadge').style.display = 'none';
+  }
+}
+
+// ============================================================
+// 写真一覧
+// ============================================================
+function renderPhotos() {
+  const grid = $('#photosGrid');
+  if (!state.photos || state.photos.length === 0) {
+    grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:30px;color:var(--ink-3);">投稿はまだありません</div>`;
+    return;
+  }
+  grid.innerHTML = state.photos.map(p => {
+    const isHidden = p.status === 'hidden';
+    const isDeleted = p.status === 'deleted';
+    const hasReports = Number(p.report_count) > 0;
+    return `
+      <div class="photo-card ${isHidden ? 'hidden-status' : ''} ${hasReports ? 'has-reports' : ''}">
+        <img src="${escapeHtml(p.image_url)}" alt="">
+        ${hasReports ? `<div class="photo-card__badge">通報${p.report_count}</div>` : ''}
+        <div class="photo-card__body">
+          <div class="photo-card__name">${escapeHtml(p.nickname)}</div>
+          <div class="photo-card__stats">
+            ❤ ${p.like_count || 0}
+            ${isHidden ? '<span style="color:var(--coral);font-weight:700;">非表示</span>' : ''}
+            ${isDeleted ? '<span style="color:var(--red);font-weight:700;">削除</span>' : ''}
+          </div>
+          ${p.registration_number ? `<div style="font-size:10px;color:var(--ink-3);">登録番号: ${escapeHtml(p.registration_number)}</div>` : ''}
+          <div class="photo-card__actions" style="margin-top:6px;">
+            ${isHidden
+              ? `<button class="photo-card__btn" data-action="unhide" data-id="${escapeHtml(p.photo_id)}">表示</button>`
+              : `<button class="photo-card__btn" data-action="hide" data-id="${escapeHtml(p.photo_id)}">非表示</button>`}
+            <button class="photo-card__btn danger" data-action="delete" data-id="${escapeHtml(p.photo_id)}">削除</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+  grid.querySelectorAll('[data-action]').forEach(btn => {
+    btn.addEventListener('click', (e) => onPhotoAction(btn.dataset.action, btn.dataset.id));
+  });
+}
+
+async function onPhotoAction(action, photoId) {
+  if (action === 'hide') {
+    showConfirm('写真を非表示にする', '一覧から非表示になります。あとで戻せます。', '', null, true, async (reason) => {
+      await DB.hostHidePhoto(EVENT_ID, photoId, HOST_KEY, reason);
+      showToast('非表示にしました');
+      await loadPhotos();
+    });
+  } else if (action === 'unhide') {
+    try {
+      await DB.hostUnhidePhoto(EVENT_ID, photoId, HOST_KEY);
+      showToast('表示に戻しました');
+      await loadPhotos();
+    } catch (err) { showToast(errMsg(err), true); }
+  } else if (action === 'delete') {
+    showConfirm('写真を削除する', '元に戻せません。本当に削除しますか？', '', null, true, async (reason) => {
+      await DB.hostDeletePhoto(EVENT_ID, photoId, HOST_KEY, reason);
+      showToast('削除しました');
+      await loadPhotos();
+    });
+  }
+}
+
+// ============================================================
+// 通報リスト
+// ============================================================
+function renderReports() {
+  const list = $('#reportsList');
+  if (!state.reports || state.reports.length === 0) {
+    list.innerHTML = `<div style="text-align:center;padding:30px;color:var(--ink-3);">通報はありません</div>`;
+    return;
+  }
+  list.innerHTML = state.reports.map(r => {
+    const photo = (state.photos || []).find(p => p.photo_id === r.photo_id);
+    const isPending = r.status === 'pending';
+    return `
+      <div class="report-item">
+        <div class="report-item__head">
+          <span class="report-item__id">${fmtDateTime(r.created_at)}</span>
+          <span class="report-item__status ${isPending ? 'pending' : 'resolved'}">${r.status === 'pending' ? '未対応' : '対応済'}</span>
+        </div>
+        <div class="report-item__body">
+          ${photo ? `<b>${escapeHtml(photo.nickname)}</b> の写真への通報` : '対象不明'}<br>
+          ${r.reason ? `理由: ${escapeHtml(r.reason)}` : ''}
+        </div>
+        ${isPending ? `
+          <div class="report-item__actions">
+            <button class="btn btn--ghost" data-resolve="ok" data-rid="${r.id}">問題なし</button>
+            <button class="btn btn--coral" data-resolve="hide" data-rid="${r.id}">非表示</button>
+            <button class="btn btn--red" data-resolve="delete" data-rid="${r.id}">削除</button>
+          </div>
+        ` : ''}
+      </div>
+    `;
+  }).join('');
+  list.querySelectorAll('[data-resolve]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const action = btn.dataset.resolve;
+      const reportId = btn.dataset.rid;
+      const labels = { ok: '問題なしとして処理', hide: '対象を非表示にする', delete: '対象を削除する' };
+      if (!confirm(labels[action] + 'しますか？')) return;
+      try {
+        await DB.hostResolveReport(EVENT_ID, reportId, HOST_KEY, action);
+        showToast('対応完了');
+        await Promise.all([loadReports(), loadPhotos()]);
+      } catch (err) { showToast(errMsg(err), true); }
+    });
+  });
+}
+
+// ============================================================
+// サブタブ
+// ============================================================
+function switchSubtab(name) {
+  state.currentSubtab = name;
+  $$('.subtab').forEach(t => t.classList.toggle('active', t.dataset.subtab === name));
+  $('#subview-photos').style.display = name === 'photos' ? 'block' : 'none';
+  $('#subview-reports').style.display = name === 'reports' ? 'block' : 'none';
+  $('#subview-logs').style.display = name === 'logs' ? 'block' : 'none';
+  if (name === 'logs') loadLogs();
+}
+
+async function loadLogs() {
+  try {
+    // RPC経由でadmin_logsを取得する関数は無いので、簡易対応：
+    // host_list_reports と同じ要領で別途RPCを追加する余地あり。
+    // 当面はフロントから直接 admin_logs を見る権限がないので、空表示
+    $('#logsList').innerHTML = '<div style="color:var(--ink-3);padding:14px;font-family:inherit;">操作ログは Supabase ダッシュボードの admin_logs テーブルで確認してください。</div>';
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+// ============================================================
+// 進行ボタン
+// ============================================================
+$$('[data-status]').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    const newStatus = btn.dataset.status;
+    if (!confirm(`イベントを「${newStatus}」に変更しますか？`)) return;
+    try {
+      await DB.hostUpdateEvent(EVENT_ID, HOST_KEY, { status: newStatus });
+      showToast('変更しました');
+      state.event = await DB.hostGetEvent(EVENT_ID, HOST_KEY);
+      renderHeader();
+    } catch (err) { showToast(errMsg(err), true); }
+  });
+});
+
+$('#resultPreviewBtn').addEventListener('click', () => {
+  const url = `index.html?event=${encodeURIComponent(EVENT_ID)}`;
+  window.open(url, '_blank');
+});
+
+// ============================================================
+// 設定保存
+// ============================================================
+function readDateTimeLocal(id) {
+  const v = $('#' + id).value;
+  return v ? new Date(v).toISOString() : null;
+}
+
+$('#saveScheduleBtn').addEventListener('click', async () => {
+  try {
+    await DB.hostUpdateEvent(EVENT_ID, HOST_KEY, {
+      upload_start_at: readDateTimeLocal('uploadStart'),
+      upload_end_at: readDateTimeLocal('uploadEnd'),
+      vote_start_at: readDateTimeLocal('voteStart'),
+      vote_end_at: readDateTimeLocal('voteEnd'),
+      ends_at: readDateTimeLocal('endsAt'),
+    });
+    showToast('期間を保存しました');
+    state.event = await DB.hostGetEvent(EVENT_ID, HOST_KEY);
+    renderHeader();
+  } catch (err) { showToast(errMsg(err), true); }
+});
+
+$('#saveSettingsBtn').addEventListener('click', async () => {
+  try {
+    await DB.hostUpdateEvent(EVENT_ID, HOST_KEY, {
+      enable_registration_number: $('#enableRegNumber').checked,
+      registration_label: $('#regLabel').value.trim() || '登録番号',
+      require_phone: $('#reqPhone').checked,
+      require_employee_id: $('#reqEmployeeId').checked,
+      require_email: $('#reqEmail').checked,
+      enable_comments: $('#enableComments').checked,
+      show_like_count: $('#showLikeCount').checked,
+      theme_preset: $('#themePreset').value,
+      max_uploads_per_user: parseInt($('#maxUploads').value) || 5,
+      auto_hide_report_threshold: parseInt($('#autoHideThreshold').value) || 0,
+    });
+    showToast('機能設定を保存しました');
+    state.event = await DB.hostGetEvent(EVENT_ID, HOST_KEY);
+    renderHeader();
+  } catch (err) { showToast(errMsg(err), true); }
+});
+
+$('#saveDataBtn').addEventListener('click', async () => {
+  try {
+    await DB.hostUpdateEvent(EVENT_ID, HOST_KEY, {
+      retention_mode: $('#retentionMode').value,
+      privacy_policy_url: $('#privacyUrl').value.trim(),
+      terms_url: $('#termsUrl').value.trim(),
+      show_privacy_url: $('#showPrivacyUrl').checked,
+      show_terms_url: $('#showTermsUrl').checked,
+    });
+    showToast('データ設定を保存しました');
+    state.event = await DB.hostGetEvent(EVENT_ID, HOST_KEY);
+    renderHeader();
+  } catch (err) { showToast(errMsg(err), true); }
+});
+
+// ============================================================
+// CSV出力
+// ============================================================
+function downloadCsv(filename, rows) {
+  const csv = rows.map(r => r.map(c => {
+    const s = String(c == null ? '' : c);
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  }).join(',')).join('\n');
+  const bom = '\uFEFF';
+  const blob = new Blob([bom + csv], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+$('#exportCsvBtn').addEventListener('click', () => {
+  const rows = [['photo_id', 'nickname', 'image_url', 'like_count', 'status', 'created_at']];
+  state.photos.forEach(p => rows.push([p.photo_id, p.nickname, p.image_url, p.like_count, p.status, p.created_at]));
+  downloadCsv(`photos_${EVENT_ID}_${Date.now()}.csv`, rows);
+  showToast('CSV出力完了');
+});
+
+$('#exportCsvWithIdsBtn').addEventListener('click', () => {
+  if (!confirm('⚠️ 識別情報（登録番号・電話番号・社員番号・メール）を含むCSVを出力します。\n取り扱いに十分注意してください。')) return;
+  const rows = [['photo_id', 'nickname', 'image_url', 'like_count', 'status', 'created_at', 'registration_number', 'phone', 'employee_id', 'email']];
+  state.photos.forEach(p => rows.push([
+    p.photo_id, p.nickname, p.image_url, p.like_count, p.status, p.created_at,
+    p.registration_number || '', p.phone || '', p.employee_id || '', p.email || ''
+  ]));
+  downloadCsv(`photos_with_ids_${EVENT_ID}_${Date.now()}.csv`, rows);
+  showToast('識別情報CSV出力完了');
+});
+
+$('#clearPiiBtn').addEventListener('click', () => {
+  showConfirm(
+    '個人情報を削除',
+    'すべての参加者の登録番号・電話番号・社員番号・メールを削除します。元に戻せません。',
+    '個人情報削除', '削除する',
+    false,
+    async () => {
+      try {
+        const count = await DB.hostClearPersonalData(EVENT_ID, HOST_KEY);
+        showToast(`${count}件の個人情報を削除しました`);
+        await loadPhotos();
+      } catch (err) { showToast(errMsg(err), true); }
+    }
+  );
+});
+
+$('#cleanupBtn').addEventListener('click', () => {
+  showConfirm(
+    '全データクリーンアップ',
+    '識別情報・コメント・いいね・通報を削除し、写真を非表示にします。元に戻せません。',
+    state.event.name,
+    null,
+    false,
+    async () => {
+      try {
+        const result = await DB.hostRunCleanup(EVENT_ID, HOST_KEY);
+        showToast('クリーンアップ完了');
+        await refreshAll();
+      } catch (err) { showToast(errMsg(err), true); }
+    }
+  );
+});
+
+// ============================================================
+// 確認モーダル
+// ============================================================
+function showConfirm(title, sub, confirmText, btnLabel, withReason, callback) {
+  $('#confirmTitle').textContent = title;
+  $('#confirmSub').textContent = sub;
+  if (confirmText) {
+    $('#confirmField').style.display = 'block';
+    $('#confirmLabel').textContent = `確認のため「${confirmText}」と入力してください`;
+    $('#confirmInput').value = '';
+    $('#confirmInput').placeholder = confirmText;
+  } else {
+    $('#confirmField').style.display = 'none';
+  }
+  if (withReason) {
+    $('#reasonField').style.display = 'block';
+    $('#reasonInput').value = '';
+  } else {
+    $('#reasonField').style.display = 'none';
+  }
+  $('#confirmOk').textContent = btnLabel || '実行';
+  $('#confirmModal').classList.add('show');
+
+  const onOk = async () => {
+    if (confirmText && $('#confirmInput').value !== confirmText) {
+      showToast('入力が一致しません', true);
+      return;
+    }
+    const reason = withReason ? $('#reasonInput').value : null;
+    $('#confirmModal').classList.remove('show');
+    $('#confirmOk').removeEventListener('click', onOk);
+    try {
+      await callback(reason);
+    } catch (err) { showToast(errMsg(err), true); }
+  };
+  $('#confirmOk').onclick = onOk;
+  $('#confirmCancel').onclick = () => {
+    $('#confirmModal').classList.remove('show');
+    $('#confirmOk').onclick = null;
+  };
+}
+
+// ============================================================
+// QRコード
+// ============================================================
+$('#qrBtn').addEventListener('click', () => {
+  const url = $('#participantUrl').textContent;
+  const qr = qrcode(0, 'M');
+  qr.addData(url);
+  qr.make();
+  $('#qrCanvas').innerHTML = qr.createImgTag(6, 8);
+  $('#qrCanvas img').style.cssText = 'width:100%;height:auto;display:block;';
+  $('#qrModal').classList.add('show');
+});
+$('#qrClose').addEventListener('click', () => $('#qrModal').classList.remove('show'));
+$('#qrDownload').addEventListener('click', () => {
+  const img = $('#qrCanvas img');
+  if (!img) return;
+  const a = document.createElement('a');
+  a.href = img.src;
+  a.download = `qr_${EVENT_ID}.gif`;
+  a.click();
+});
+
+// URLコピー
+$$('[data-copy]').forEach(b => {
+  b.addEventListener('click', () => {
+    const text = $('#' + b.dataset.copy).textContent;
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(() => showToast('コピーしました'));
+    }
+  });
+});
+
+// 起動：URLにkeyあれば自動認証
+(async () => {
+  if (HOST_KEY) {
+    const ok = await tryAuth(HOST_KEY);
+    if (ok) {
+      $('#authOverlay').classList.add('hidden');
+      $('#mainContainer').style.display = 'block';
+      init();
+      return;
+    }
+  }
+  $('#authInput').focus();
+})();
+</script>
+</body>
+</html>
