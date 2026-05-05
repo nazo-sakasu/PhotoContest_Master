@@ -202,6 +202,38 @@ body{
 .create-preview[data-theme="spring"] .create-preview__theme-bar{background:linear-gradient(135deg,#3f7d5c,#75a878)}
 .create-preview[data-theme="night"] .create-preview__theme-bar{background:linear-gradient(135deg,#121826,#243047)}
 
+/* 参加者画面の簡易イメージ */
+.create-preview__phone{
+  background:#f5ede0;border-radius:14px;padding:14px 12px;
+  border:1px solid var(--line);
+  transition:background 0.3s;
+}
+.create-preview[data-theme="family"] .create-preview__phone{background:#fff1df}
+.create-preview[data-theme="corporate"] .create-preview__phone{background:#f3f4f6}
+.create-preview[data-theme="spring"] .create-preview__phone{background:#fff7e8}
+.create-preview[data-theme="night"] .create-preview__phone{background:#e9e6df}
+
+.create-preview__phone-inner{display:grid;gap:8px}
+.create-preview__phone-title{font-size:13px;font-weight:800;color:#15171c;word-break:break-word;text-align:center;margin-bottom:2px}
+.create-preview__phone-sub{font-size:9px;font-weight:600;color:#6c7d8a;letter-spacing:0.05em;text-align:center;margin-bottom:4px;word-break:break-word}
+.create-preview__phone-field{background:white;border-radius:6px;padding:6px 8px}
+.create-preview__phone-field small{font-size:9px;color:#6c7d8a;font-weight:700;display:block;margin-bottom:3px}
+.create-preview__phone-input{height:14px;background:#f3f0e8;border-radius:3px}
+.create-preview__phone-consent{
+  background:rgba(214,90,58,0.08);border-radius:6px;padding:8px;
+  border-left:2px solid #d65a3a;
+}
+.create-preview__phone-consent-title{font-size:9px;font-weight:800;color:#d65a3a;margin-bottom:3px}
+.create-preview__phone-consent-check{font-size:9px;color:#2c4250;font-weight:600}
+.create-preview__phone-btn{
+  background:#d65a3a;color:white;text-align:center;
+  font-size:11px;font-weight:800;padding:8px;border-radius:6px;
+  letter-spacing:0.1em;
+}
+.create-preview[data-theme="corporate"] .create-preview__phone-btn{background:#2563eb}
+.create-preview[data-theme="spring"] .create-preview__phone-btn{background:#e7837a}
+.create-preview[data-theme="night"] .create-preview__phone-btn{background:#c8951f}
+
 /* URL表示 */
 .url-row{
   background:white;border-radius:var(--r);padding:13px;
@@ -364,12 +396,26 @@ body{
           <label class="toggle-switch"><input type="checkbox" id="newEnableReg"><span></span></label>
         </div>
 
+        <div class="modal__field" id="newRegLabelField" style="display:none">
+          <label>登録番号ラベル</label>
+          <input type="text" class="modal__input" id="newRegLabel" placeholder="登録番号" value="登録番号" maxlength="20">
+        </div>
+
         <div class="create-row-toggle">
           <label class="create-toggle-label">
             <span>コメント機能</span>
             <small>初期はOFF推奨</small>
           </label>
           <label class="toggle-switch"><input type="checkbox" id="newEnableComments"><span></span></label>
+        </div>
+
+        <div class="modal__field">
+          <label>自動削除モード</label>
+          <select class="modal__input" id="newRetentionMode">
+            <option value="manual">主催者確認のうえ削除</option>
+            <option value="auto10">イベント終了10日後に自動削除</option>
+            <option value="auto30">イベント終了30日後に自動削除</option>
+          </select>
         </div>
 
         <div class="create-row-toggle">
@@ -416,6 +462,29 @@ body{
             <div class="create-preview__row"><span>コメント</span><b id="previewComments">OFF</b></div>
             <div class="create-preview__row"><span>プライバシーポリシー</span><b id="previewPrivacy">表示</b></div>
             <div class="create-preview__row"><span>利用規約</span><b id="previewTerms">表示</b></div>
+            <div class="create-preview__row"><span>自動削除</span><b id="previewRetention">主催者確認のうえ削除</b></div>
+          </div>
+        </div>
+
+        <!-- 参加者画面の簡易イメージ -->
+        <div class="create-preview__label" style="margin-top:14px">PARTICIPANT VIEW</div>
+        <div class="create-preview__phone" id="previewPhone">
+          <div class="create-preview__phone-inner" id="previewPhoneInner">
+            <div class="create-preview__phone-title" id="previewPhoneTitle">イベント名</div>
+            <div class="create-preview__phone-sub" id="previewPhoneSub">テーマ</div>
+            <div class="create-preview__phone-field">
+              <small>ニックネーム</small>
+              <div class="create-preview__phone-input"></div>
+            </div>
+            <div class="create-preview__phone-field" id="previewPhoneRegField" style="display:none">
+              <small id="previewPhoneRegLabel">登録番号</small>
+              <div class="create-preview__phone-input"></div>
+            </div>
+            <div class="create-preview__phone-consent" id="previewPhoneConsent" style="display:none">
+              <div class="create-preview__phone-consent-title">📋 個人情報の取扱いについて</div>
+              <div class="create-preview__phone-consent-check">☑ 上記内容に同意して参加します</div>
+            </div>
+            <div class="create-preview__phone-btn">参加する</div>
           </div>
         </div>
       </aside>
@@ -518,6 +587,7 @@ body{
 
 <script>
 'use strict';
+console.log('[EVENTS VERSION] 2026-05-05-preview-fix');
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => document.querySelectorAll(s);
@@ -754,9 +824,14 @@ function updatePreview() {
   const theme = $('#newTheme').value.trim() || 'テーマ・サブタイトル';
   const themePreset = $('#newThemePreset').value;
   const enableReg = $('#newEnableReg').checked;
+  const regLabel = ($('#newRegLabel') && $('#newRegLabel').value.trim()) || '登録番号';
   const enableComments = $('#newEnableComments').checked;
   const showPrivacy = $('#newShowPrivacy').checked;
   const showTerms = $('#newShowTerms').checked;
+  const retentionMode = $('#newRetentionMode') ? $('#newRetentionMode').value : 'manual';
+  const retentionLabel = retentionMode === 'auto10' ? 'イベント終了10日後に自動削除'
+                       : retentionMode === 'auto30' ? 'イベント終了30日後に自動削除'
+                       : '主催者確認のうえ削除';
 
   $('#previewName').textContent = name;
   $('#previewTheme').textContent = theme;
@@ -765,7 +840,23 @@ function updatePreview() {
   $('#previewComments').textContent = enableComments ? 'ON' : 'OFF';
   $('#previewPrivacy').textContent = showPrivacy ? '表示' : '非表示';
   $('#previewTerms').textContent = showTerms ? '表示' : '非表示';
+  if ($('#previewRetention')) $('#previewRetention').textContent = retentionLabel;
   document.querySelector('.create-preview').dataset.theme = themePreset;
+
+  // 参加者画面の簡易イメージ
+  if ($('#previewPhoneTitle')) {
+    $('#previewPhoneTitle').textContent = name;
+    $('#previewPhoneSub').textContent = theme;
+    if (enableReg) {
+      $('#previewPhoneRegField').style.display = 'block';
+      $('#previewPhoneRegLabel').textContent = regLabel;
+    } else {
+      $('#previewPhoneRegField').style.display = 'none';
+    }
+    // 同意ブロックは「show_privacy_url または show_terms_url のどちらかがONの時だけ」
+    const needsConsent = showPrivacy || showTerms;
+    $('#previewPhoneConsent').style.display = needsConsent ? 'block' : 'none';
+  }
 }
 
 $('#newEventBtn').addEventListener('click', () => {
@@ -775,11 +866,14 @@ $('#newEventBtn').addEventListener('click', () => {
   $('#newTheme').value = '家族の思い出';
   $('#newThemePreset').value = 'aquarium';
   $('#newEnableReg').checked = false;
+  $('#newRegLabel').value = '登録番号';
+  $('#newRegLabelField').style.display = 'none';
   $('#newEnableComments').checked = false;
   $('#newShowPrivacy').checked = true;
   $('#newShowTerms').checked = true;
   $('#newPrivacyUrl').value = DEFAULT_PRIVACY_URL;
   $('#newTermsUrl').value = DEFAULT_TERMS_URL;
+  $('#newRetentionMode').value = 'manual';
   $('#newHostKey').value = genHostKey();
   updatePreview();
   $('#createModal').classList.add('show');
@@ -787,20 +881,23 @@ $('#newEventBtn').addEventListener('click', () => {
 });
 
 // プレビュー更新トリガー
-['#newName','#newTheme','#newThemePreset','#newEnableReg','#newEnableComments','#newShowPrivacy','#newShowTerms']
+['#newName','#newTheme','#newThemePreset','#newEnableReg','#newRegLabel','#newEnableComments','#newShowPrivacy','#newShowTerms','#newRetentionMode']
   .forEach(sel => {
     const el = $(sel);
+    if (!el) return;
     el.addEventListener('input', updatePreview);
     el.addEventListener('change', updatePreview);
   });
 
 // 登録番号ONに切り替えた瞬間、プライバシー/利用規約チェックをOFFに
 $('#newEnableReg').addEventListener('change', (e) => {
+  // ラベルフィールドの表示切替
+  $('#newRegLabelField').style.display = e.target.checked ? 'block' : 'none';
   if (e.target.checked) {
     $('#newShowPrivacy').checked = false;
     $('#newShowTerms').checked = false;
-    updatePreview();
   }
+  updatePreview();
 });
 
 $('#genHostKeyBtn').addEventListener('click', () => { $('#newHostKey').value = genHostKey(); });
@@ -822,11 +919,13 @@ $('#createConfirm').addEventListener('click', async () => {
   const extraSettings = {
     theme_preset: $('#newThemePreset').value,
     enable_registration_number: $('#newEnableReg').checked,
+    registration_label: $('#newRegLabel').value.trim() || '登録番号',
     enable_comments: $('#newEnableComments').checked,
     show_privacy_url: $('#newShowPrivacy').checked,
     show_terms_url: $('#newShowTerms').checked,
     privacy_policy_url: $('#newPrivacyUrl').value.trim() || DEFAULT_PRIVACY_URL,
     terms_url: $('#newTermsUrl').value.trim() || DEFAULT_TERMS_URL,
+    retention_mode: $('#newRetentionMode').value,
   };
 
   const btn = $('#createConfirm');

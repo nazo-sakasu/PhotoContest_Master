@@ -46,7 +46,12 @@ body[data-theme="night"]{
   --coral:#c8951f;--coral-soft:#d9aa42;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%;overflow-x:hidden;max-width:100%}
+html,body{
+  height:100%;
+  width:100%;
+  max-width:100%;
+  overflow-x:hidden;
+}
 body{
   background:var(--sand);color:var(--ink);
   font-family:'Noto Sans JP',sans-serif;font-weight:500;
@@ -86,15 +91,35 @@ body{
 }
 .tab.active{background:var(--ink);color:var(--foam)}
 
-/* ビュー */
-.views{flex:1;position:relative;overflow:hidden}
+/* ビュー（display方式：absolute残像を避けるため） */
+.views{flex:1;position:relative;overflow:hidden;min-width:0}
 .view{
-  position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;
-  -webkit-overflow-scrolling:touch;opacity:0;pointer-events:none;
-  transition:opacity 0.2s;
+  display:none;
+  height:100%;
+  width:100%;
+  max-width:100%;
+  overflow-y:auto;overflow-x:hidden;
+  -webkit-overflow-scrolling:touch;
   padding:18px 18px 80px;
+  min-width:0;
+  box-sizing:border-box;
 }
-.view.active{opacity:1;pointer-events:auto}
+.view.active{display:block}
+
+/* iPhone Safari の縦棒・横ズレ完全防止 */
+.frame,.views,.view,.notice,.uploader,.upload__meta,.btn-primary{
+  min-width:0;
+  max-width:100%;
+}
+
+/* 投稿画面の不要な疑似要素を確実に無効化 */
+#view-upload::before,#view-upload::after,
+.uploader::before,.uploader::after,
+.notice::before,.notice::after,
+.upload__meta::before,.upload__meta::after{
+  display:none !important;
+  content:none !important;
+}
 
 /* 投稿エリア */
 .upload__hero{
@@ -547,12 +572,21 @@ function errMsg(err) {
 // 初期化
 // ============================================================
 async function init() {
+  console.log('[INDEX VERSION] 2026-05-05-fix-consent-layout');
   try {
     state.event = await DB.getEvent(EVENT_ID);
     if (!state.event) {
       showToast('イベントが見つかりません', true);
       return;
     }
+
+    console.log('[EVENT FLAGS]', {
+      show_privacy_url: state.event.show_privacy_url,
+      show_terms_url: state.event.show_terms_url,
+      privacy_policy_url: state.event.privacy_policy_url,
+      terms_url: state.event.terms_url,
+      enable_registration_number: state.event.enable_registration_number
+    });
 
     applyEventSettings();
     $('#metaMax').textContent = state.event.max_uploads_per_user || 5;
@@ -616,13 +650,21 @@ function setupNameModal() {
   // プライバシー説明・同意チェック
   // 「参加者に表示」フラグがONのものがあるときだけ同意ブロックを表示する
   // （URL文字列の有無や登録番号の有無では判定しない）
-  const showPrivacy = !!(ev.show_privacy_url && ev.privacy_policy_url);
-  const showTerms = !!(ev.show_terms_url && ev.terms_url);
+  // === （重要）show_privacy_url / show_terms_url が undefined の場合は false 扱い ===
+  const showPrivacy = ev.show_privacy_url === true && !!ev.privacy_policy_url;
+  const showTerms = ev.show_terms_url === true && !!ev.terms_url;
   const needsConsent = showPrivacy || showTerms;
 
+  console.log('[CONSENT CHECK]', { showPrivacy, showTerms, needsConsent });
+
+  // どちらの分岐でも要素操作するため、参照は事前に取得
+  const noticeEl = $('#privacyNotice');
+  const consentEl = $('#consentBlock');
+  const linksEl = $('#privacyLinks');
+
   if (needsConsent) {
-    $('#privacyNotice').style.display = 'block';
-    $('#consentBlock').style.display = 'flex';
+    noticeEl.style.display = 'block';
+    consentEl.style.display = 'flex';
 
     // 保持期間ラベル
     const retLabel = ev.retention_mode === 'auto10' ? 'イベント終了10日後に自動削除'
@@ -639,13 +681,19 @@ function setupNameModal() {
       links.push(`<a href="${escapeHtml(ev.terms_url)}" target="_blank" rel="noopener">利用規約</a>`);
     }
     if (links.length > 0) {
-      $('#privacyLinks').innerHTML = '📄 ' + links.join(' ／ ');
-      $('#privacyLinks').style.display = 'block';
+      linksEl.innerHTML = '📄 ' + links.join(' ／ ');
+      linksEl.style.display = 'block';
+    } else {
+      linksEl.style.display = 'none';
     }
   } else {
-    // 両方OFFなら確実に非表示にする（既存値が残っていても）
-    $('#privacyNotice').style.display = 'none';
-    $('#consentBlock').style.display = 'none';
+    // 両方OFFなら確実に非表示にする（DOM操作で確実に消す）
+    noticeEl.style.display = 'none';
+    consentEl.style.display = 'none';
+    if (linksEl) linksEl.style.display = 'none';
+    // チェック状態もリセット（前回の同意状態を引きずらない）
+    const cb = $('#consentCheck');
+    if (cb) cb.checked = false;
   }
 
   // 既存ニックネームを復元
@@ -688,8 +736,8 @@ async function submitNameForm() {
 
   // 同意チェック
   // 「参加者に表示」フラグがONのものがある時だけ同意必須
-  const showPrivacy = !!(ev.show_privacy_url && ev.privacy_policy_url);
-  const showTerms = !!(ev.show_terms_url && ev.terms_url);
+  const showPrivacy = ev.show_privacy_url === true && !!ev.privacy_policy_url;
+  const showTerms = ev.show_terms_url === true && !!ev.terms_url;
   const needsConsent = showPrivacy || showTerms;
   if (needsConsent && !$('#consentCheck').checked) {
     showToast('プライバシー説明への同意が必要です', true);
