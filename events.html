@@ -385,6 +385,9 @@ body{
             <option value="corporate">企業イベントシンプル</option>
             <option value="spring">春フェス</option>
             <option value="night">ナイトイベント</option>
+            <option value="premium">プレミアムダーク</option>
+            <option value="natural">ナチュラルグリーン</option>
+            <option value="festival">フェスティバルポップ</option>
           </select>
         </div>
 
@@ -407,6 +410,29 @@ body{
             <small>初期はOFF推奨</small>
           </label>
           <label class="toggle-switch"><input type="checkbox" id="newEnableComments"><span></span></label>
+        </div>
+
+        <div class="create-row-toggle">
+          <label class="create-toggle-label">
+            <span>投稿者名を参加者に表示</span>
+            <small>OFFでも管理画面では確認可能</small>
+          </label>
+          <label class="toggle-switch"><input type="checkbox" id="newShowAuthorName" checked><span></span></label>
+        </div>
+
+        <div class="modal__field">
+          <label>結果の公開方法</label>
+          <select class="modal__input" id="newResultPublishMode">
+            <option value="realtime">リアルタイム表示</option>
+            <option value="manual">手動公開</option>
+            <option value="scheduled">日時指定公開</option>
+          </select>
+        </div>
+
+        <div class="modal__field" id="newResultsPublishAtField" style="display:none">
+          <label>結果公開日時</label>
+          <input type="datetime-local" class="modal__input" id="newResultsPublishAt">
+          <div class="modal__hint">この日時を過ぎると参加者画面に結果を表示します</div>
         </div>
 
         <div class="modal__field">
@@ -463,6 +489,8 @@ body{
             <div class="create-preview__row"><span>プライバシーポリシー</span><b id="previewPrivacy">表示</b></div>
             <div class="create-preview__row"><span>利用規約</span><b id="previewTerms">表示</b></div>
             <div class="create-preview__row"><span>自動削除</span><b id="previewRetention">主催者確認のうえ削除</b></div>
+            <div class="create-preview__row"><span>投稿者名表示</span><b id="previewShowAuthor">表示</b></div>
+            <div class="create-preview__row"><span>結果公開</span><b id="previewResultMode">リアルタイム</b></div>
           </div>
         </div>
 
@@ -817,6 +845,9 @@ const THEME_NAMES = {
   corporate: '企業イベントシンプル',
   spring: '春フェス',
   night: 'ナイトイベント',
+  premium: 'プレミアムダーク',
+  natural: 'ナチュラルグリーン',
+  festival: 'フェスティバルポップ',
 };
 
 function updatePreview() {
@@ -832,6 +863,11 @@ function updatePreview() {
   const retentionLabel = retentionMode === 'auto10' ? 'イベント終了10日後に自動削除'
                        : retentionMode === 'auto30' ? 'イベント終了30日後に自動削除'
                        : '主催者確認のうえ削除';
+  const showAuthor = $('#newShowAuthorName') ? $('#newShowAuthorName').checked : true;
+  const resultMode = $('#newResultPublishMode') ? $('#newResultPublishMode').value : 'realtime';
+  const resultModeLabel = resultMode === 'realtime' ? 'リアルタイム'
+                        : resultMode === 'manual' ? '手動公開'
+                        : '日時指定';
 
   $('#previewName').textContent = name;
   $('#previewTheme').textContent = theme;
@@ -841,7 +877,14 @@ function updatePreview() {
   $('#previewPrivacy').textContent = showPrivacy ? '表示' : '非表示';
   $('#previewTerms').textContent = showTerms ? '表示' : '非表示';
   if ($('#previewRetention')) $('#previewRetention').textContent = retentionLabel;
+  if ($('#previewShowAuthor')) $('#previewShowAuthor').textContent = showAuthor ? '表示' : '非表示';
+  if ($('#previewResultMode')) $('#previewResultMode').textContent = resultModeLabel;
   document.querySelector('.create-preview').dataset.theme = themePreset;
+
+  // 結果公開日時欄の表示切替
+  if ($('#newResultsPublishAtField')) {
+    $('#newResultsPublishAtField').style.display = resultMode === 'scheduled' ? 'block' : 'none';
+  }
 
   // 参加者画面の簡易イメージ
   if ($('#previewPhoneTitle')) {
@@ -874,6 +917,10 @@ $('#newEventBtn').addEventListener('click', () => {
   $('#newPrivacyUrl').value = DEFAULT_PRIVACY_URL;
   $('#newTermsUrl').value = DEFAULT_TERMS_URL;
   $('#newRetentionMode').value = 'manual';
+  $('#newShowAuthorName').checked = true;
+  $('#newResultPublishMode').value = 'realtime';
+  $('#newResultsPublishAt').value = '';
+  $('#newResultsPublishAtField').style.display = 'none';
   $('#newHostKey').value = genHostKey();
   updatePreview();
   $('#createModal').classList.add('show');
@@ -881,7 +928,7 @@ $('#newEventBtn').addEventListener('click', () => {
 });
 
 // プレビュー更新トリガー
-['#newName','#newTheme','#newThemePreset','#newEnableReg','#newRegLabel','#newEnableComments','#newShowPrivacy','#newShowTerms','#newRetentionMode']
+['#newName','#newTheme','#newThemePreset','#newEnableReg','#newRegLabel','#newEnableComments','#newShowPrivacy','#newShowTerms','#newRetentionMode','#newShowAuthorName','#newResultPublishMode','#newResultsPublishAt']
   .forEach(sel => {
     const el = $(sel);
     if (!el) return;
@@ -916,6 +963,7 @@ $('#createConfirm').addEventListener('click', async () => {
   if (hostKey.length < 8) return showToast('host_keyは8文字以上必要です', true);
 
   // 追加設定値を集める
+  const publishAtRaw = $('#newResultsPublishAt').value;
   const extraSettings = {
     theme_preset: $('#newThemePreset').value,
     enable_registration_number: $('#newEnableReg').checked,
@@ -926,6 +974,9 @@ $('#createConfirm').addEventListener('click', async () => {
     privacy_policy_url: $('#newPrivacyUrl').value.trim() || DEFAULT_PRIVACY_URL,
     terms_url: $('#newTermsUrl').value.trim() || DEFAULT_TERMS_URL,
     retention_mode: $('#newRetentionMode').value,
+    show_author_name: $('#newShowAuthorName').checked,
+    result_publish_mode: $('#newResultPublishMode').value,
+    results_publish_at: publishAtRaw ? new Date(publishAtRaw).toISOString() : null,
   };
 
   const btn = $('#createConfirm');

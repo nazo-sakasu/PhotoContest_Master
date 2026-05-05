@@ -73,6 +73,14 @@
     return data;
   }
 
+  async function hostSetAward(eventId, hostKey, photoId, awardTitle) {
+    const { data, error } = await sb.rpc('host_set_award', {
+      p_event_id: eventId, p_host_key: hostKey, p_photo_id: photoId, p_award_title: awardTitle || ''
+    });
+    if (error) throw error;
+    return data;
+  }
+
   async function hostDeleteEvent(eventId, hostKey, confirmName) {
     const { data, error } = await sb.rpc('host_delete_event', {
       p_event_id: eventId, p_host_key: hostKey, p_confirm_name: confirmName
@@ -332,6 +340,7 @@
     verifyAdminKey, updateAdminKey,
     // photos
     listPhotos, listRankings, countPhotosForUser, hostListPhotosWithIdentifiers,
+    hostSetAward,
     // upload + submit
     uploadImage, submitPhoto,
     // likes

@@ -20,13 +20,14 @@
 }
 
 /* テーマプリセット：body[data-theme] で切替 */
+/* 水族館ブルー（標準・添付画像準拠・絶対変更不可） */
 body[data-theme="aquarium"]{
   --sea:#0a3d52;--sea-2:#14587a;
   --sand:#f5ede0;--sand-2:#ede2cd;--foam:#faf6ec;
   --coral:#d65a3a;--coral-soft:#e87a5d;
 }
 body[data-theme="family"]{
-  --sea:#8a4b2a;--sea-2:#b86b3f;
+  --sea:#9c5a36;--sea-2:#c47c4f;
   --sand:#fff1df;--sand-2:#f7dcc2;--foam:#fffaf2;
   --coral:#e56b4f;--coral-soft:#ef8b73;
 }
@@ -41,9 +42,27 @@ body[data-theme="spring"]{
   --coral:#e7837a;--coral-soft:#ee9b94;
 }
 body[data-theme="night"]{
-  --sea:#121826;--sea-2:#243047;
+  --sea:#1a2233;--sea-2:#2c3a52;
   --sand:#e9e6df;--sand-2:#d8d2c6;--foam:#f8f5ee;
   --coral:#c8951f;--coral-soft:#d9aa42;
+}
+/* プレミアムダーク：黒寄りで重厚 */
+body[data-theme="premium"]{
+  --sea:#0c1018;--sea-2:#1a2030;
+  --sand:#e8e2d1;--sand-2:#d4cdb8;--foam:#f4eddc;
+  --coral:#b8862d;--coral-soft:#d2a04b;
+}
+/* ナチュラルグリーン：深緑＋生成り */
+body[data-theme="natural"]{
+  --sea:#2d5238;--sea-2:#4a7855;
+  --sand:#f5efe0;--sand-2:#e8dfc6;--foam:#fbf6e9;
+  --coral:#c97a3e;--coral-soft:#dc955d;
+}
+/* フェスティバルポップ：明るく賑やか */
+body[data-theme="festival"]{
+  --sea:#5a4180;--sea-2:#7a5fa3;
+  --sand:#fff3e0;--sand-2:#ffe0b8;--foam:#fffaeb;
+  --coral:#e8612e;--coral-soft:#f08350;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{
@@ -370,6 +389,82 @@ body{
   animation:spin 0.8s linear infinite;display:inline-block;
 }
 @keyframes spin{to{transform:rotate(360deg)}}
+/* ========================================
+   演出（いいね・投稿完了）
+   ======================================== */
+.heart-fx{
+  position:fixed;z-index:9999;font-size:24px;
+  pointer-events:none;color:#d65a3a;
+  animation:heartFloat 0.9s ease-out forwards;
+  text-shadow:0 2px 8px rgba(214,90,58,0.4);
+  will-change:transform,opacity;
+}
+@keyframes heartFloat{
+  0%{transform:translate(-50%,-50%) scale(0.5);opacity:0}
+  20%{transform:translate(-50%,-60%) scale(1.2);opacity:1}
+  100%{transform:translate(-50%,-180%) scale(0.8);opacity:0}
+}
+
+.submit-fx{
+  position:fixed;inset:0;z-index:9998;
+  display:flex;align-items:center;justify-content:center;
+  background:rgba(10,31,42,0);
+  pointer-events:none;
+  transition:background 0.2s;
+}
+.submit-fx.show{background:rgba(10,31,42,0.35)}
+.submit-fx__card{
+  background:var(--foam);border-radius:20px;
+  padding:30px 36px;text-align:center;
+  box-shadow:0 20px 50px -12px rgba(0,0,0,0.4);
+  transform:scale(0.7);opacity:0;
+  transition:transform 0.3s cubic-bezier(0.18,0.89,0.32,1.28),opacity 0.2s;
+}
+.submit-fx.show .submit-fx__card{transform:scale(1);opacity:1}
+.submit-fx__icon{font-size:42px;margin-bottom:8px;animation:popIn 0.5s 0.1s both}
+.submit-fx__title{font-size:18px;font-weight:800;color:var(--ink);margin-bottom:6px;letter-spacing:0.05em}
+.submit-fx__sub{font-size:12px;color:var(--ink-3)}
+@keyframes popIn{0%{transform:scale(0)}80%{transform:scale(1.2)}100%{transform:scale(1)}}
+
+.submit-fx__confetti{
+  position:absolute;inset:0;overflow:hidden;pointer-events:none;
+}
+.submit-fx__confetti span{
+  position:absolute;top:-20px;width:8px;height:14px;
+  border-radius:2px;
+  animation:confettiFall 1.4s linear forwards;
+}
+@keyframes confettiFall{
+  0%{transform:translateY(0) rotate(0);opacity:1}
+  100%{transform:translateY(110vh) rotate(720deg);opacity:0.7}
+}
+
+/* ========================================
+   結果画面：セクションタイトル＋主催者賞
+   ======================================== */
+.result__section-title{
+  font-size:13px;font-weight:800;color:var(--ink);
+  letter-spacing:0.08em;margin:18px 0 10px;
+  padding-bottom:6px;border-bottom:2px solid var(--coral);
+}
+.result__section-title:first-child{margin-top:0}
+
+.result__award{
+  background:var(--foam);border-radius:var(--r);
+  padding:14px;margin-bottom:10px;
+  border:1px solid var(--line);
+  box-shadow:0 2px 8px rgba(0,0,0,0.04);
+}
+.result__award-title{
+  display:inline-block;background:var(--coral);color:white;
+  font-size:11px;font-weight:800;letter-spacing:0.1em;
+  padding:5px 12px;border-radius:100px;margin-bottom:10px;
+}
+.result__award-img{
+  width:100%;aspect-ratio:4/3;object-fit:cover;
+  border-radius:10px;margin-bottom:8px;
+}
+.result__award-name{font-size:13px;font-weight:700;color:var(--ink-2);text-align:center}
 </style>
 </head>
 <body>
@@ -590,6 +685,55 @@ function showToast(msg, isError = false) {
   t.classList.add('show');
   clearTimeout(showToast._t);
   showToast._t = setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// いいね演出：ボタン位置からハートが浮かぶ
+function spawnHeartFx(anchorEl) {
+  const rect = anchorEl ? anchorEl.getBoundingClientRect() : { left: window.innerWidth/2, top: window.innerHeight/2, width: 0, height: 0 };
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
+  for (let i = 0; i < 3; i++) {
+    const h = document.createElement('div');
+    h.className = 'heart-fx';
+    h.textContent = '❤';
+    const dx = (Math.random() - 0.5) * 40;
+    h.style.left = (cx + dx) + 'px';
+    h.style.top = cy + 'px';
+    h.style.animationDelay = (i * 80) + 'ms';
+    document.body.appendChild(h);
+    setTimeout(() => h.remove(), 1000);
+  }
+}
+
+// 投稿完了演出：中央にカード＋紙吹雪
+function showSubmitFx() {
+  const overlay = document.createElement('div');
+  overlay.className = 'submit-fx';
+  overlay.innerHTML = `
+    <div class="submit-fx__card">
+      <div class="submit-fx__icon">📷</div>
+      <div class="submit-fx__title">投稿完了！</div>
+      <div class="submit-fx__sub">あなたの写真がエントリーされました</div>
+    </div>
+    <div class="submit-fx__confetti"></div>
+  `;
+  // 紙吹雪を生成
+  const conf = overlay.querySelector('.submit-fx__confetti');
+  const colors = ['#d65a3a', '#e87a5d', '#c8951f', '#0a3d52', '#14587a'];
+  for (let i = 0; i < 14; i++) {
+    const c = document.createElement('span');
+    c.style.left = (Math.random() * 100) + '%';
+    c.style.background = colors[i % colors.length];
+    c.style.animationDelay = (Math.random() * 0.3) + 's';
+    c.style.animationDuration = (1.2 + Math.random() * 0.6) + 's';
+    conf.appendChild(c);
+  }
+  document.body.appendChild(overlay);
+  setTimeout(() => overlay.classList.add('show'), 10);
+  setTimeout(() => {
+    overlay.classList.remove('show');
+    setTimeout(() => overlay.remove(), 300);
+  }, 1700);
 }
 
 function escapeHtml(s) {
@@ -820,7 +964,7 @@ function applyEventSettings() {
   $('#eventTitle').textContent = state.event.name || 'フォトコンテスト';
   $('#eventTheme').textContent = state.event.theme || 'PHOTO CONTEST';
   // 背景テーマ反映
-  const allowed = ['aquarium','family','corporate','spring','night'];
+  const allowed = ['aquarium','family','corporate','spring','night','premium','natural','festival'];
   const t = state.event.theme_preset;
   document.body.dataset.theme = allowed.includes(t) ? t : 'aquarium';
 }
@@ -967,6 +1111,7 @@ $('#submitBtn').addEventListener('click', async () => {
     localStorage.setItem(postedKey, JSON.stringify(postedIds));
 
     showToast('投稿完了！');
+    showSubmitFx();  // 投稿完了演出
     clearPreview();
     await loadPhotos();
   } catch (err) {
@@ -1005,11 +1150,12 @@ function renderGallery() {
     grid.innerHTML = `<div class="gallery__empty"><div class="gallery__empty-icon">📷</div><div>まだ写真がありません</div></div>`;
     return;
   }
+  const showAuthor = state.event.show_author_name !== false;
   grid.innerHTML = state.photos.map(p => `
     <div class="photo-card" data-id="${p.photo_id}">
       <img src="${escapeHtml(p.image_url)}" alt="">
       <div class="photo-card__info">
-        <div class="photo-card__name">${escapeHtml(p.nickname)}</div>
+        ${showAuthor ? `<div class="photo-card__name">${escapeHtml(p.nickname)}</div>` : '<div class="photo-card__name">　</div>'}
         ${state.event.show_like_count !== false
           ? `<div class="photo-card__likes">❤ ${p.like_count || 0}</div>`
           : ''}
@@ -1024,30 +1170,80 @@ function renderGallery() {
 // ============================================================
 // 結果表示
 // ============================================================
+function isResultsPublic() {
+  const ev = state.event;
+  if (!ev) return false;
+  const mode = ev.result_publish_mode || 'realtime';
+  if (mode === 'realtime') return true;
+  if (mode === 'manual') return ev.results_published === true;
+  if (mode === 'scheduled') {
+    if (!ev.results_publish_at) return false;
+    return new Date() >= new Date(ev.results_publish_at);
+  }
+  return true;
+}
+
 function renderResult() {
   const list = $('#resultList');
   const empty = $('#resultEmpty');
+
+  // 結果公開モード判定
+  if (!isResultsPublic()) {
+    list.innerHTML = '';
+    empty.style.display = 'block';
+    empty.querySelector('div:last-child').textContent = '結果発表をお待ちください';
+    return;
+  }
+
   if (!state.photos || state.photos.length === 0) {
     list.innerHTML = '';
     empty.style.display = 'block';
+    empty.querySelector('div:last-child').textContent = 'まだ写真がありません';
     return;
   }
   empty.style.display = 'none';
-  const sorted = [...state.photos].sort((a, b) => (b.like_count || 0) - (a.like_count || 0));
+
+  const showAuthor = state.event.show_author_name !== false;
+
+  // 主催者賞（award_title が設定されている写真）
+  const awarded = state.photos.filter(p => p.award_title && p.status === 'visible');
+  // ランキング
+  const sorted = [...state.photos].filter(p => p.status === 'visible').sort((a, b) => (b.like_count || 0) - (a.like_count || 0));
   const top5 = sorted.slice(0, 5);
-  list.innerHTML = top5.map((p, i) => {
-    const rank = i + 1;
-    return `
-      <div class="result__rank">
-        <div class="result__rank-num result__rank-num--${rank}">${rank}</div>
-        <img src="${escapeHtml(p.image_url)}" class="result__rank-img" alt="">
-        <div class="result__rank-info">
-          <div class="result__rank-name">${escapeHtml(p.nickname)}</div>
-          <div class="result__rank-likes">❤ ${p.like_count || 0}</div>
+
+  let html = '';
+
+  // ランキング
+  if (top5.length > 0) {
+    html += '<div class="result__section-title">🏆 ランキング</div>';
+    html += top5.map((p, i) => {
+      const rank = i + 1;
+      return `
+        <div class="result__rank">
+          <div class="result__rank-num result__rank-num--${rank}">${rank}</div>
+          <img src="${escapeHtml(p.image_url)}" class="result__rank-img" alt="">
+          <div class="result__rank-info">
+            ${showAuthor ? `<div class="result__rank-name">${escapeHtml(p.nickname)}</div>` : ''}
+            <div class="result__rank-likes">❤ ${p.like_count || 0}</div>
+          </div>
         </div>
+      `;
+    }).join('');
+  }
+
+  // 主催者賞
+  if (awarded.length > 0) {
+    html += '<div class="result__section-title">🎖 主催者賞</div>';
+    html += awarded.map(p => `
+      <div class="result__award">
+        <div class="result__award-title">${escapeHtml(p.award_title)}</div>
+        <img src="${escapeHtml(p.image_url)}" class="result__award-img" alt="">
+        ${showAuthor ? `<div class="result__award-name">${escapeHtml(p.nickname)}</div>` : ''}
       </div>
-    `;
-  }).join('');
+    `).join('');
+  }
+
+  list.innerHTML = html;
 }
 
 // ============================================================
@@ -1058,7 +1254,9 @@ function openDetail(photoId) {
   if (!photo) return;
   state.detailPhoto = photo;
   $('#detailImg').src = photo.image_url;
-  $('#detailName').textContent = photo.nickname;
+  const showAuthor = state.event.show_author_name !== false;
+  $('#detailName').textContent = showAuthor ? photo.nickname : '';
+  $('#detailName').style.display = showAuthor ? '' : 'none';
 
   // いいねボタン
   const isMyPhoto = isMyPostedPhoto(photoId);
@@ -1132,6 +1330,7 @@ $('#detailLike').addEventListener('click', async () => {
         showToast('すでにいいね済みです');
       } else {
         showToast('いいねしました ❤');
+        spawnHeartFx(btn);  // ミニ演出
       }
       state.myLikes.add(photoId);
       btn.textContent = '✓ いいね済み（取消）';
