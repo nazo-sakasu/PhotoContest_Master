@@ -613,9 +613,14 @@ function setupNameModal() {
   if (ev.require_employee_id) $('#employeeIdField').style.display = 'block';
   if (ev.require_email) $('#emailField').style.display = 'block';
 
-  // プライバシー説明
-  const hasPersonalData = ev.enable_registration_number || ev.require_phone || ev.require_employee_id || ev.require_email;
-  if (hasPersonalData) {
+  // プライバシー説明・同意チェック
+  // 「参加者に表示」フラグがONのものがあるときだけ同意ブロックを表示する
+  // （URL文字列の有無や登録番号の有無では判定しない）
+  const showPrivacy = !!(ev.show_privacy_url && ev.privacy_policy_url);
+  const showTerms = !!(ev.show_terms_url && ev.terms_url);
+  const needsConsent = showPrivacy || showTerms;
+
+  if (needsConsent) {
     $('#privacyNotice').style.display = 'block';
     $('#consentBlock').style.display = 'flex';
 
@@ -625,18 +630,22 @@ function setupNameModal() {
                    : '主催者確認のうえ削除';
     $('#retentionLabel').textContent = retLabel;
 
-    // URL
+    // URLリンク（ON のものだけ表示）
     const links = [];
-    if (ev.show_privacy_url && ev.privacy_policy_url) {
+    if (showPrivacy) {
       links.push(`<a href="${escapeHtml(ev.privacy_policy_url)}" target="_blank" rel="noopener">プライバシーポリシー</a>`);
     }
-    if (ev.show_terms_url && ev.terms_url) {
+    if (showTerms) {
       links.push(`<a href="${escapeHtml(ev.terms_url)}" target="_blank" rel="noopener">利用規約</a>`);
     }
     if (links.length > 0) {
       $('#privacyLinks').innerHTML = '📄 ' + links.join(' ／ ');
       $('#privacyLinks').style.display = 'block';
     }
+  } else {
+    // 両方OFFなら確実に非表示にする（既存値が残っていても）
+    $('#privacyNotice').style.display = 'none';
+    $('#consentBlock').style.display = 'none';
   }
 
   // 既存ニックネームを復元
@@ -678,8 +687,11 @@ async function submitNameForm() {
   }
 
   // 同意チェック
-  const hasPersonalData = ev.enable_registration_number || ev.require_phone || ev.require_employee_id || ev.require_email;
-  if (hasPersonalData && !$('#consentCheck').checked) {
+  // 「参加者に表示」フラグがONのものがある時だけ同意必須
+  const showPrivacy = !!(ev.show_privacy_url && ev.privacy_policy_url);
+  const showTerms = !!(ev.show_terms_url && ev.terms_url);
+  const needsConsent = showPrivacy || showTerms;
+  if (needsConsent && !$('#consentCheck').checked) {
     showToast('プライバシー説明への同意が必要です', true);
     return;
   }
