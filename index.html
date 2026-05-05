@@ -100,23 +100,69 @@ body{
   max-width:100%;
   overflow-y:auto;overflow-x:hidden;
   -webkit-overflow-scrolling:touch;
-  padding:18px 18px 80px;
+  padding:0;
+  background:transparent;
   min-width:0;
   box-sizing:border-box;
 }
 .view.active{display:block}
 
+/* 内側ラッパー：ここで幅とパディングを完全管理 */
+.view-inner{
+  width:100%;
+  max-width:100%;
+  padding:18px 18px 80px;
+  overflow:hidden;
+  background:transparent;
+  box-sizing:border-box;
+  min-width:0;
+}
+
 /* iPhone Safari の縦棒・横ズレ完全防止 */
-.frame,.views,.view,.notice,.uploader,.upload__meta,.btn-primary{
+.frame,.views,.view,.view-inner,
+.notice,.uploader,.upload__meta,.btn-primary{
   min-width:0;
   max-width:100%;
+}
+
+/* 投稿ビュー内の全要素：横ハミ出し防止 */
+#view-upload *{max-width:100%}
+#view-upload .notice,
+#view-upload .uploader,
+#view-upload .btn-primary,
+#view-upload .upload__meta,
+#view-upload .upload__hero,
+#view-upload #previewSlot{
+  display:block;
+  width:100%;
+  max-width:100%;
+  overflow:hidden;
+  box-sizing:border-box;
+}
+
+/* Safari描画残り対策：投稿ビューにcontain＋transform */
+#view-upload,
+#view-upload .view-inner{
+  contain:layout paint;
+  transform:translateZ(0);
+  backface-visibility:hidden;
+  -webkit-backface-visibility:hidden;
+}
+
+/* iOS Safari専用：clip-pathで描画範囲を確実に内側へ */
+@supports (-webkit-touch-callout:none){
+  #view-upload .view-inner{
+    clip-path:inset(0 0 0 0);
+  }
 }
 
 /* 投稿画面の不要な疑似要素を確実に無効化 */
 #view-upload::before,#view-upload::after,
 .uploader::before,.uploader::after,
 .notice::before,.notice::after,
-.upload__meta::before,.upload__meta::after{
+.upload__meta::before,.upload__meta::after,
+.btn-primary::before,.btn-primary::after,
+.view-inner::before,.view-inner::after{
   display:none !important;
   content:none !important;
 }
@@ -135,6 +181,11 @@ body{
   padding:32px 16px;text-align:center;cursor:pointer;
   transition:background 0.2s;margin-bottom:14px;
   position:relative;overflow:hidden;
+  display:block;width:100%;max-width:100%;
+  box-sizing:border-box;
+  transform:translateZ(0);
+  backface-visibility:hidden;
+  -webkit-backface-visibility:hidden;
 }
 .uploader:active{background:var(--coral-soft)}
 .uploader__icon{
@@ -144,15 +195,14 @@ body{
 .uploader__text{font-weight:700;font-size:14px;margin-bottom:3px}
 .uploader__hint{font-size:11px;color:var(--ink-3)}
 .uploader input[type="file"]{
-  position:absolute !important;
-  width:1px !important;height:1px !important;
-  padding:0 !important;margin:-1px !important;
-  overflow:hidden !important;
-  clip:rect(0,0,0,0) !important;
-  white-space:nowrap !important;
-  border:0 !important;
+  position:fixed !important;
+  left:-9999px !important;
+  top:-9999px !important;
+  width:1px !important;
+  height:1px !important;
   opacity:0 !important;
   pointer-events:none !important;
+  visibility:hidden !important;
 }
 
 .preview{margin-bottom:14px;position:relative}
@@ -347,64 +397,70 @@ body{
 
     <!-- 投稿ビュー -->
     <section class="view active" id="view-upload">
-      <div class="upload__hero">
-        <h2 class="upload__title">あなたの一枚を<br>みんなにシェア</h2>
-        <p class="upload__sub" id="uploadSub">スマホで撮った写真をアップロード。みんなが「いいね」で投票します。</p>
-      </div>
+      <div class="view-inner">
+        <div class="upload__hero">
+          <h2 class="upload__title">あなたの一枚を<br>みんなにシェア</h2>
+          <p class="upload__sub" id="uploadSub">スマホで撮った写真をアップロード。みんなが「いいね」で投票します。</p>
+        </div>
 
-      <div class="notice">
-        <b>📷 投稿時の注意</b>
-        <ul>
-          <li>他の人が写っている写真は、必ず本人の了承を得てください。</li>
-          <li>個人情報や会社の機密情報が写り込んだ写真は投稿しないでください。</li>
-          <li>不適切と判断された写真は、主催者判断で非表示・削除する場合があります。</li>
-        </ul>
-      </div>
+        <div class="notice">
+          <b>📷 投稿時の注意</b>
+          <ul>
+            <li>他の人が写っている写真は、必ず本人の了承を得てください。</li>
+            <li>個人情報や会社の機密情報が写り込んだ写真は投稿しないでください。</li>
+            <li>不適切と判断された写真は、主催者判断で非表示・削除する場合があります。</li>
+          </ul>
+        </div>
 
-      <label class="uploader" id="uploaderLabel">
-        <div class="uploader__icon">📷</div>
-        <div class="uploader__text">写真を選ぶ</div>
-        <div class="uploader__hint">タップしてアップロード</div>
-        <input type="file" id="fileInput" accept="image/jpeg,image/jpg,image/png,image/webp">
-      </label>
+        <label class="uploader" id="uploaderLabel">
+          <div class="uploader__icon">📷</div>
+          <div class="uploader__text">写真を選ぶ</div>
+          <div class="uploader__hint">タップしてアップロード</div>
+          <input type="file" id="fileInput" accept="image/jpeg,image/jpg,image/png,image/webp">
+        </label>
 
-      <div id="previewSlot"></div>
+        <div id="previewSlot"></div>
 
-      <button class="btn-primary" id="submitBtn" disabled>この写真を投稿する</button>
+        <button class="btn-primary" id="submitBtn" disabled>この写真を投稿する</button>
 
-      <div class="upload__meta">
-        <span>投稿者：<b id="metaName">—</b></span>
-        <span>投稿数：<b id="metaCount">0</b> / <span id="metaMax">5</span></span>
+        <div class="upload__meta">
+          <span>投稿者：<b id="metaName">—</b></span>
+          <span>投稿数：<b id="metaCount">0</b> / <span id="metaMax">5</span></span>
+        </div>
       </div>
     </section>
 
     <!-- ギャラリービュー -->
     <section class="view" id="view-gallery">
-      <div class="notice" id="voteNotice">
-        <b>❤️ 投票時の注意</b>
-        <ul>
-          <li>気に入った写真には「いいね」で応援できます。</li>
-          <li>いいねは、<b>1枚の写真につき1回まで</b>です。</li>
-          <li>自分の投稿写真にはいいねできません。</li>
-          <li>自分以外の写真には<b>何枚でも</b>いいねできます。</li>
-        </ul>
-      </div>
-      <div class="gallery" id="galleryGrid">
-        <div class="gallery__empty" id="galleryEmpty">
-          <div class="gallery__empty-icon">📷</div>
-          <div>まだ写真がありません</div>
+      <div class="view-inner">
+        <div class="notice" id="voteNotice">
+          <b>❤️ 投票時の注意</b>
+          <ul>
+            <li>気に入った写真には「いいね」で応援できます。</li>
+            <li>いいねは、<b>1枚の写真につき1回まで</b>です。</li>
+            <li>自分の投稿写真にはいいねできません。</li>
+            <li>自分以外の写真には<b>何枚でも</b>いいねできます。</li>
+          </ul>
+        </div>
+        <div class="gallery" id="galleryGrid">
+          <div class="gallery__empty" id="galleryEmpty">
+            <div class="gallery__empty-icon">📷</div>
+            <div>まだ写真がありません</div>
+          </div>
         </div>
       </div>
     </section>
 
     <!-- 結果ビュー -->
     <section class="view" id="view-result">
-      <div class="result">
-        <h2 class="result__title" id="resultTitle">🏆 結果発表</h2>
-        <div id="resultList"></div>
-        <div id="resultEmpty" class="gallery__empty" style="display:none;">
-          <div class="gallery__empty-icon">⏳</div>
-          <div>結果発表をお待ちください</div>
+      <div class="view-inner">
+        <div class="result">
+          <h2 class="result__title" id="resultTitle">🏆 結果発表</h2>
+          <div id="resultList"></div>
+          <div id="resultEmpty" class="gallery__empty" style="display:none;">
+            <div class="gallery__empty-icon">⏳</div>
+            <div>結果発表をお待ちください</div>
+          </div>
         </div>
       </div>
     </section>
@@ -572,7 +628,7 @@ function errMsg(err) {
 // 初期化
 // ============================================================
 async function init() {
-  console.log('[INDEX VERSION] 2026-05-05-fix-consent-layout');
+  console.log('[INDEX VERSION] 2026-05-05-layout-mask-fix');
   try {
     state.event = await DB.getEvent(EVENT_ID);
     if (!state.event) {

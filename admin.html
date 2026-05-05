@@ -253,6 +253,105 @@ body{
 
 /* QRコード表示用 */
 .qr-modal-img{width:240px;height:240px;background:white;padding:12px;border-radius:var(--r);margin:0 auto}
+
+/* ============================================================
+   参加者画面プレビュー
+   ============================================================ */
+.participant-preview{
+  background:#f5ede0;
+  border-radius:14px;
+  padding:14px;
+  border:1px solid var(--line);
+  transition:background 0.3s;
+  margin-top:6px;
+}
+.participant-preview[data-theme="family"]{background:#fff1df}
+.participant-preview[data-theme="corporate"]{background:#f3f4f6}
+.participant-preview[data-theme="spring"]{background:#fff7e8}
+.participant-preview[data-theme="night"]{background:#e9e6df}
+
+.pp-phone{display:grid;gap:10px}
+.pp-header{padding:8px 4px 4px}
+.pp-header__title{
+  font-size:14px;font-weight:800;color:#15171c;
+  word-break:break-word;line-height:1.4;
+}
+.participant-preview[data-theme="aquarium"] .pp-header__title{color:#0a3d52}
+.participant-preview[data-theme="family"] .pp-header__title{color:#8a4b2a}
+.participant-preview[data-theme="corporate"] .pp-header__title{color:#1f2937}
+.participant-preview[data-theme="spring"] .pp-header__title{color:#3f7d5c}
+.participant-preview[data-theme="night"] .pp-header__title{color:#121826}
+.pp-header__theme{font-size:9px;color:#6c7d8a;font-weight:600;letter-spacing:0.05em;margin-top:2px;word-break:break-word}
+
+.pp-tabs{
+  display:flex;gap:2px;background:white;border-radius:8px;padding:3px;
+  font-size:9px;font-weight:700;
+}
+.pp-tab{flex:1;text-align:center;padding:6px 4px;color:#6c7d8a;border-radius:6px}
+.pp-tab--active{background:#15171c;color:white}
+
+.pp-card{background:white;border-radius:10px;padding:11px}
+.pp-card__h{font-size:10px;font-weight:800;color:#15171c;margin-bottom:8px;letter-spacing:0.03em}
+
+.pp-field{margin-bottom:7px}
+.pp-field small{font-size:8px;color:#6c7d8a;font-weight:700;display:block;margin-bottom:3px;letter-spacing:0.04em}
+.pp-input{height:14px;background:#f3f0e8;border-radius:3px;border:1px solid #e9e3d4}
+
+.pp-consent{
+  background:rgba(214,90,58,0.08);border-radius:6px;padding:7px 8px;
+  border-left:2px solid #d65a3a;margin:7px 0;
+}
+.participant-preview[data-theme="corporate"] .pp-consent{background:rgba(37,99,235,0.08);border-left-color:#2563eb}
+.participant-preview[data-theme="spring"] .pp-consent{background:rgba(231,131,122,0.1);border-left-color:#e7837a}
+.participant-preview[data-theme="night"] .pp-consent{background:rgba(200,149,31,0.1);border-left-color:#c8951f}
+
+.pp-consent__t{font-size:8px;font-weight:800;color:#d65a3a;margin-bottom:2px}
+.participant-preview[data-theme="corporate"] .pp-consent__t{color:#2563eb}
+.participant-preview[data-theme="spring"] .pp-consent__t{color:#e7837a}
+.participant-preview[data-theme="night"] .pp-consent__t{color:#c8951f}
+.pp-consent__c{font-size:8px;color:#2c4250;font-weight:600}
+
+.pp-btn{
+  background:#d65a3a;color:white;text-align:center;
+  font-size:10px;font-weight:800;padding:8px;border-radius:6px;
+  letter-spacing:0.05em;margin-top:6px;
+}
+.participant-preview[data-theme="corporate"] .pp-btn{background:#2563eb}
+.participant-preview[data-theme="spring"] .pp-btn{background:#e7837a}
+.participant-preview[data-theme="night"] .pp-btn{background:#c8951f}
+.pp-btn--solid{background:#15171c}
+.participant-preview .pp-btn--solid{background:#15171c}
+
+.pp-notice-line{height:5px;background:#f3f0e8;border-radius:2px;margin-bottom:3px}
+.pp-notice-line--short{width:60%}
+
+.pp-uploader{
+  background:#ede2cd;border-radius:10px;padding:14px 8px;text-align:center;
+  margin:8px 0;
+}
+.participant-preview[data-theme="family"] .pp-uploader{background:#f7dcc2}
+.participant-preview[data-theme="corporate"] .pp-uploader{background:#e5e7eb}
+.participant-preview[data-theme="spring"] .pp-uploader{background:#f4e5c2}
+.participant-preview[data-theme="night"] .pp-uploader{background:#d8d2c6}
+.pp-uploader__ico{
+  width:24px;height:24px;background:white;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:12px;margin:0 auto 4px;
+}
+.pp-uploader__t{font-size:9px;font-weight:700;color:#15171c}
+
+.pp-meta{
+  display:flex;justify-content:space-between;
+  font-size:8px;color:#6c7d8a;font-weight:600;
+  background:#f3f0e8;padding:6px 8px;border-radius:5px;margin-top:6px;
+}
+.pp-meta b{color:#15171c;font-weight:800;margin-left:2px}
+
+.pp-info{
+  display:flex;justify-content:space-between;font-size:8px;
+  color:#6c7d8a;padding:0 4px;font-weight:600;
+}
+.pp-info b{color:#15171c;font-weight:800;margin-left:2px}
 </style>
 </head>
 <body>
@@ -330,6 +429,76 @@ body{
           </div>
         </div>
         <button class="btn btn--ghost btn--full" id="qrBtn" style="margin-top:8px;">📷 QRコード表示</button>
+      </div>
+
+      <!-- 参加者画面プレビュー -->
+      <div class="section">
+        <div class="section__h">参加者画面プレビュー</div>
+        <div class="participant-preview" id="participantPreview" data-theme="aquarium">
+          <div class="pp-phone">
+            <div class="pp-header">
+              <div class="pp-header__title" id="ppTitle">イベント名</div>
+              <div class="pp-header__theme" id="ppTheme">テーマ</div>
+            </div>
+            <div class="pp-tabs">
+              <span class="pp-tab pp-tab--active">投稿</span>
+              <span class="pp-tab">みんなの写真</span>
+              <span class="pp-tab">結果</span>
+            </div>
+
+            <!-- 入力カード（参加情報入力） -->
+            <div class="pp-card">
+              <div class="pp-card__h">参加情報入力</div>
+              <div class="pp-field">
+                <small>ニックネーム</small>
+                <div class="pp-input"></div>
+              </div>
+              <div class="pp-field" id="ppRegField" style="display:none">
+                <small id="ppRegLabel">登録番号</small>
+                <div class="pp-input"></div>
+              </div>
+              <div class="pp-field" id="ppPhoneField" style="display:none">
+                <small>電話番号</small>
+                <div class="pp-input"></div>
+              </div>
+              <div class="pp-field" id="ppEmpField" style="display:none">
+                <small>社員番号</small>
+                <div class="pp-input"></div>
+              </div>
+              <div class="pp-field" id="ppEmailField" style="display:none">
+                <small>メールアドレス</small>
+                <div class="pp-input"></div>
+              </div>
+              <div class="pp-consent" id="ppConsent" style="display:none">
+                <div class="pp-consent__t">📋 個人情報の取扱いについて</div>
+                <div class="pp-consent__c">☑ 上記内容に同意して参加します</div>
+              </div>
+              <div class="pp-btn">参加する</div>
+            </div>
+
+            <!-- 投稿カード -->
+            <div class="pp-card">
+              <div class="pp-card__h">📷 投稿時の注意</div>
+              <div class="pp-notice-line"></div>
+              <div class="pp-notice-line"></div>
+              <div class="pp-notice-line pp-notice-line--short"></div>
+              <div class="pp-uploader">
+                <div class="pp-uploader__ico">📷</div>
+                <div class="pp-uploader__t">写真を選ぶ</div>
+              </div>
+              <div class="pp-btn pp-btn--solid">この写真を投稿する</div>
+              <div class="pp-meta">
+                <span>投稿者：あなた</span>
+                <span>投稿数：0 / <b id="ppMax">5</b></span>
+              </div>
+            </div>
+
+            <div class="pp-info">
+              <span>コメント機能：<b id="ppComments">OFF</b></span>
+              <span>いいね数：<b id="ppLikes">表示</b></span>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- 進行 -->
@@ -539,7 +708,7 @@ body{
 <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
 <script>
 'use strict';
-console.log('[ADMIN VERSION] 2026-05-05-url-fix');
+console.log('[ADMIN VERSION] 2026-05-05-participant-preview-fix');
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => document.querySelectorAll(s);
@@ -686,6 +855,85 @@ function renderHeader() {
   // 参加者用URL
   const baseUrl = location.href.replace(/\/[^\/]*(\?.*)?$/, '');
   $('#participantUrl').textContent = `${baseUrl}/index.html?event=${encodeURIComponent(EVENT_ID)}`;
+
+  // 参加者画面プレビュー更新
+  updateParticipantPreview();
+}
+
+// ============================================================
+// 参加者画面プレビュー
+// ============================================================
+function updateParticipantPreview() {
+  const ev = state.event;
+  if (!ev) return;
+
+  // 入力中の値があればそれを優先、なければevから取得
+  const $val = (sel) => { const el = document.querySelector(sel); return el ? el.value : null; };
+  const $chk = (sel) => { const el = document.querySelector(sel); return el ? el.checked : null; };
+
+  const name = ev.name || 'イベント名';
+  const themeStr = ev.theme || 'テーマ';
+  const theme = $val('#themePreset') || ev.theme_preset || 'aquarium';
+  const enableReg = $chk('#enableRegNumber');
+  const enableRegFinal = enableReg !== null ? enableReg : !!ev.enable_registration_number;
+  const regLabel = ($val('#regLabel') && $val('#regLabel').trim()) || ev.registration_label || '登録番号';
+  const reqPhone = $chk('#reqPhone');
+  const reqPhoneFinal = reqPhone !== null ? reqPhone : !!ev.require_phone;
+  const reqEmployeeId = $chk('#reqEmployeeId');
+  const reqEmployeeIdFinal = reqEmployeeId !== null ? reqEmployeeId : !!ev.require_employee_id;
+  const reqEmail = $chk('#reqEmail');
+  const reqEmailFinal = reqEmail !== null ? reqEmail : !!ev.require_email;
+  const enableComments = $chk('#enableComments');
+  const enableCommentsFinal = enableComments !== null ? enableComments : !!ev.enable_comments;
+  const showLikeCount = $chk('#showLikeCount');
+  const showLikeCountFinal = showLikeCount !== null ? showLikeCount : ev.show_like_count !== false;
+  const maxUploads = $val('#maxUploads') || ev.max_uploads_per_user || 5;
+  const showPrivacy = $chk('#showPrivacyUrl');
+  const showPrivacyFinal = showPrivacy !== null ? showPrivacy : !!ev.show_privacy_url;
+  const showTerms = $chk('#showTermsUrl');
+  const showTermsFinal = showTerms !== null ? showTerms : !!ev.show_terms_url;
+  const needsConsent = !!(showPrivacyFinal || showTermsFinal);
+
+  console.log('[PARTICIPANT PREVIEW]', {
+    theme,
+    enableReg: enableRegFinal,
+    regLabel,
+    reqPhone: reqPhoneFinal,
+    reqEmployeeId: reqEmployeeIdFinal,
+    reqEmail: reqEmailFinal,
+    enableComments: enableCommentsFinal,
+    showLikeCount: showLikeCountFinal,
+    maxUploads,
+    showPrivacy: showPrivacyFinal,
+    showTerms: showTermsFinal,
+    needsConsent,
+  });
+
+  // テーマ反映
+  const ppEl = document.querySelector('#participantPreview');
+  if (ppEl) ppEl.dataset.theme = theme;
+
+  // テキスト反映
+  const setText = (sel, text) => { const el = document.querySelector(sel); if (el) el.textContent = text; };
+  const setDisp = (sel, show) => { const el = document.querySelector(sel); if (el) el.style.display = show ? 'block' : 'none'; };
+
+  setText('#ppTitle', name);
+  setText('#ppTheme', themeStr);
+  setText('#ppMax', String(maxUploads));
+  setText('#ppComments', enableCommentsFinal ? 'ON' : 'OFF');
+  setText('#ppLikes', showLikeCountFinal ? '表示' : '非表示');
+
+  // フィールド表示制御
+  if (enableRegFinal) {
+    setDisp('#ppRegField', true);
+    setText('#ppRegLabel', regLabel);
+  } else {
+    setDisp('#ppRegField', false);
+  }
+  setDisp('#ppPhoneField', reqPhoneFinal);
+  setDisp('#ppEmpField', reqEmployeeIdFinal);
+  setDisp('#ppEmailField', reqEmailFinal);
+  setDisp('#ppConsent', needsConsent);
 }
 
 // ============================================================
@@ -724,7 +972,26 @@ function renderSettings() {
       $('#showPrivacyUrl').checked = false;
       $('#showTermsUrl').checked = false;
     }
+    updateParticipantPreview();
   });
+
+  // プレビュー連動：設定値の変更を全部監視
+  const previewWatchSelectors = [
+    '#themePreset','#enableRegNumber','#regLabel',
+    '#reqPhone','#reqEmployeeId','#reqEmail',
+    '#enableComments','#showLikeCount','#maxUploads',
+    '#showPrivacyUrl','#showTermsUrl','#retentionMode'
+  ];
+  previewWatchSelectors.forEach(sel => {
+    const el = document.querySelector(sel);
+    if (!el || el.dataset.previewWatching) return;
+    el.dataset.previewWatching = '1';
+    el.addEventListener('input', updateParticipantPreview);
+    el.addEventListener('change', updateParticipantPreview);
+  });
+
+  // 初回レンダー時にもプレビュー反映
+  updateParticipantPreview();
 }
 
 // ============================================================
