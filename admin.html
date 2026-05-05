@@ -232,16 +232,24 @@ body{
 
 /* URL欄 */
 .url-row{
-  background:white;border-radius:var(--r);padding:10px;
-  display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;
+  background:white;border-radius:var(--r);padding:11px;
   margin-bottom:6px;font-size:11px;
+  display:flex;flex-direction:column;gap:7px;
+  border:1px solid var(--line);
 }
-.url-row__label{font-weight:700;font-size:10px;color:var(--ink-3);letter-spacing:0.1em}
-.url-row__url{font-family:'Inter',sans-serif;font-size:11px;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.url-row__main{min-width:0}
+.url-row__label{font-weight:700;font-size:10px;color:var(--ink-2);letter-spacing:0.1em;margin-bottom:4px}
+.url-row__url{
+  font-family:'Inter',monospace;font-size:11px;color:var(--ink-3);
+  word-break:break-all;overflow-wrap:anywhere;line-height:1.6;
+  background:var(--sand);padding:7px 9px;border-radius:5px;
+}
+.url-row__actions{display:flex;justify-content:flex-end}
 .url-row__btn{
-  padding:5px 11px;background:var(--ink);color:var(--foam);
-  border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;
+  padding:6px 14px;background:var(--ink);color:var(--foam);
+  border:none;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer;
 }
+.url-row__btn:hover{background:var(--coral)}
 
 /* QRコード表示用 */
 .qr-modal-img{width:240px;height:240px;background:white;padding:12px;border-radius:var(--r);margin:0 auto}
@@ -313,11 +321,13 @@ body{
       <div class="section">
         <div class="section__h">URL・QR</div>
         <div class="url-row">
-          <div>
+          <div class="url-row__main">
             <div class="url-row__label">📱 参加者用</div>
             <div class="url-row__url" id="participantUrl">—</div>
           </div>
-          <button class="url-row__btn" data-copy="participantUrl">コピー</button>
+          <div class="url-row__actions">
+            <button class="url-row__btn" data-copy="participantUrl">コピー</button>
+          </div>
         </div>
         <button class="btn btn--ghost btn--full" id="qrBtn" style="margin-top:8px;">📷 QRコード表示</button>
       </div>
@@ -700,13 +710,19 @@ function renderSettings() {
   $('#maxUploads').value = ev.max_uploads_per_user || 5;
   $('#autoHideThreshold').value = ev.auto_hide_report_threshold || 0;
   $('#retentionMode').value = ev.retention_mode || 'manual';
-  $('#privacyUrl').value = ev.privacy_policy_url || '';
-  $('#termsUrl').value = ev.terms_url || '';
+  $('#privacyUrl').value = ev.privacy_policy_url || 'https://www.weeek-end.com/privacy-policy/';
+  $('#termsUrl').value = ev.terms_url || 'https://www.weeek-end.com/riyou-kiyaku/';
   $('#showPrivacyUrl').checked = ev.show_privacy_url !== false;
   $('#showTermsUrl').checked = ev.show_terms_url !== false;
 
   $('#enableRegNumber').addEventListener('change', (e) => {
     $('#regLabelRow').style.display = e.target.checked ? 'flex' : 'none';
+    // 登録番号をONに切り替えた瞬間、プライバシー/利用規約の表示チェックをOFF
+    // （取得情報を最小化する運用方針のため）
+    if (e.target.checked) {
+      $('#showPrivacyUrl').checked = false;
+      $('#showTermsUrl').checked = false;
+    }
   });
 }
 

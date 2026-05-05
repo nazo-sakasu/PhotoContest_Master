@@ -133,18 +133,99 @@ body{
 .modal__actions{display:flex;gap:8px;margin-top:18px}
 .modal__actions .btn{flex:1;justify-content:center;padding:13px}
 
+/* ワイドモーダル（作成画面） */
+.modal--wide{max-width:880px}
+.create-grid{display:grid;grid-template-columns:1fr 280px;gap:24px;margin-top:6px}
+@media(max-width:760px){.create-grid{grid-template-columns:1fr}}
+.create-form{min-width:0}
+
+/* トグル行 */
+.create-row-toggle{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:10px 0;border-bottom:1px solid var(--line);gap:14px;
+}
+.create-toggle-label{flex:1;font-size:13px;font-weight:700;color:var(--ink-2);cursor:pointer}
+.create-toggle-label small{display:block;font-size:11px;color:var(--ink-3);font-weight:500;margin-top:2px}
+
+.toggle-switch{position:relative;display:inline-block;width:42px;height:24px;flex-shrink:0;cursor:pointer}
+.toggle-switch input{opacity:0;width:0;height:0}
+.toggle-switch span{
+  position:absolute;inset:0;background:var(--ink-3);
+  border-radius:100px;transition:0.2s;
+}
+.toggle-switch span::before{
+  content:'';position:absolute;width:18px;height:18px;
+  background:white;border-radius:50%;top:3px;left:3px;transition:0.2s;
+}
+.toggle-switch input:checked + span{background:var(--coral)}
+.toggle-switch input:checked + span::before{left:21px}
+
+/* プレビュー */
+.create-preview{
+  background:var(--foam);border-radius:var(--r-lg);
+  padding:18px;position:sticky;top:0;align-self:start;
+  border:1px solid var(--line);
+}
+.create-preview__label{
+  font-family:'Inter',sans-serif;font-size:10px;font-weight:800;
+  letter-spacing:0.25em;color:var(--ink-3);margin-bottom:10px;
+}
+.create-preview__card{
+  background:white;border-radius:var(--r);padding:18px 16px;
+  border:1px solid var(--line);
+}
+.create-preview__theme-bar{
+  height:6px;border-radius:100px;margin-bottom:14px;
+  background:linear-gradient(135deg,#0a3d52,#14587a);
+  transition:background 0.3s;
+}
+.create-preview__name{
+  font-size:15px;font-weight:800;color:var(--ink);
+  margin-bottom:4px;word-break:break-word;
+}
+.create-preview__theme{
+  font-size:11px;color:var(--ink-3);font-weight:600;letter-spacing:0.05em;
+  margin-bottom:14px;word-break:break-word;
+}
+.create-preview__meta{display:grid;gap:6px;font-size:11px}
+.create-preview__row{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:6px 0;border-top:1px solid var(--line);
+}
+.create-preview__row span{color:var(--ink-3);font-weight:600}
+.create-preview__row b{color:var(--ink);font-weight:700;font-size:11px}
+
+/* テーマ別プレビューのカラーバー */
+.create-preview[data-theme="aquarium"] .create-preview__theme-bar{background:linear-gradient(135deg,#0a3d52,#14587a)}
+.create-preview[data-theme="family"] .create-preview__theme-bar{background:linear-gradient(135deg,#8a4b2a,#b86b3f)}
+.create-preview[data-theme="corporate"] .create-preview__theme-bar{background:linear-gradient(135deg,#1f2937,#374151)}
+.create-preview[data-theme="spring"] .create-preview__theme-bar{background:linear-gradient(135deg,#3f7d5c,#75a878)}
+.create-preview[data-theme="night"] .create-preview__theme-bar{background:linear-gradient(135deg,#121826,#243047)}
+
 /* URL表示 */
 .url-row{
-  background:white;border-radius:var(--r);padding:11px;
-  display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;
-  margin-bottom:6px;
+  background:white;border-radius:var(--r);padding:13px;
+  margin-bottom:8px;
+  display:flex;flex-direction:column;gap:8px;
+  border:1px solid var(--line);
 }
-.url-row__label{font-size:11px;font-weight:700;color:var(--ink-2);margin-bottom:3px}
-.url-row__url{font-family:'Inter',sans-serif;font-size:11px;color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.url-row__main{min-width:0}
+.url-row__label{
+  font-size:10px;font-weight:800;color:var(--ink-2);
+  letter-spacing:0.1em;margin-bottom:5px;text-transform:uppercase;
+}
+.url-row__url{
+  font-family:'Inter',monospace;font-size:11px;color:var(--ink-3);
+  word-break:break-all;overflow-wrap:anywhere;line-height:1.6;
+  background:var(--sand);padding:8px 10px;border-radius:6px;
+}
+.url-row__actions{display:flex;justify-content:flex-end;gap:6px}
 .url-row__btn{
-  padding:7px 12px;background:var(--ink);color:white;
-  border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;
+  padding:7px 14px;background:var(--ink);color:white;
+  border:none;border-radius:6px;font-size:11px;font-weight:700;
+  cursor:pointer;letter-spacing:0.05em;
 }
+.url-row__btn:hover{background:var(--coral)}
 .warning-block{
   background:#fff8e1;border:1px solid var(--coral);border-radius:var(--r);
   padding:11px 14px;margin:14px 0;font-size:12px;line-height:1.7;color:var(--ink-2);
@@ -240,30 +321,106 @@ body{
 
 <!-- 新規作成モーダル -->
 <div class="modal-overlay" id="createModal">
-  <div class="modal">
+  <div class="modal modal--wide">
     <div class="modal__title">新規イベント作成</div>
-    <div class="modal__sub">基本情報を入力してください。詳細はホスト画面で設定できます。</div>
-    <div class="modal__field">
-      <label>イベント名 <span style="color:var(--coral)">*</span></label>
-      <input type="text" class="modal__input" id="newName" placeholder="例：豊田自動織機労組 春季ファミリー祭り" maxlength="80">
-    </div>
-    <div class="modal__field">
-      <label>イベントID（URL用） <span style="color:var(--coral)">*</span></label>
-      <input type="text" class="modal__input" id="newId" placeholder="例：toyota_shokki_2026" maxlength="40">
-      <div class="modal__hint">半角英数字とハイフン・アンダースコアのみ。後から変更不可。</div>
-    </div>
-    <div class="modal__field">
-      <label>テーマ</label>
-      <input type="text" class="modal__input" id="newTheme" placeholder="例：家族の思い出" maxlength="30">
-    </div>
-    <div class="modal__field">
-      <label>host_key（管理キー） <span style="color:var(--coral)">*</span></label>
-      <div style="display:flex;gap:6px;">
-        <input type="text" class="modal__input" id="newHostKey" placeholder="自動生成された値" minlength="8">
-        <button class="btn btn--ghost" id="genHostKeyBtn" type="button">再生成</button>
+    <div class="modal__sub">基本情報・機能設定を入力してください。詳細は後からホスト画面で変更できます。</div>
+
+    <div class="create-grid">
+      <!-- 入力フォーム -->
+      <div class="create-form">
+
+        <div class="modal__field">
+          <label>イベント名 <span style="color:var(--coral)">*</span></label>
+          <input type="text" class="modal__input" id="newName" placeholder="例：豊田自動織機労組 春季ファミリー祭り" maxlength="80">
+        </div>
+
+        <div class="modal__field">
+          <label>イベントID（URL用） <span style="color:var(--coral)">*</span></label>
+          <input type="text" class="modal__input" id="newId" placeholder="例：toyota_shokki_2026" maxlength="40">
+          <div class="modal__hint">半角英数字とハイフン・アンダースコアのみ。後から変更不可。</div>
+        </div>
+
+        <div class="modal__field">
+          <label>テーマ・サブタイトル</label>
+          <input type="text" class="modal__input" id="newTheme" placeholder="例：家族の思い出" maxlength="30">
+        </div>
+
+        <div class="modal__field">
+          <label>背景テーマ</label>
+          <select class="modal__input" id="newThemePreset">
+            <option value="aquarium">水族館ブルー</option>
+            <option value="family">ファミリー暖色</option>
+            <option value="corporate">企業イベントシンプル</option>
+            <option value="spring">春フェス</option>
+            <option value="night">ナイトイベント</option>
+          </select>
+        </div>
+
+        <div class="create-row-toggle">
+          <label class="create-toggle-label">
+            <span>登録番号を使う</span>
+            <small>受付の通し番号を投稿時に必須入力</small>
+          </label>
+          <label class="toggle-switch"><input type="checkbox" id="newEnableReg"><span></span></label>
+        </div>
+
+        <div class="create-row-toggle">
+          <label class="create-toggle-label">
+            <span>コメント機能</span>
+            <small>初期はOFF推奨</small>
+          </label>
+          <label class="toggle-switch"><input type="checkbox" id="newEnableComments"><span></span></label>
+        </div>
+
+        <div class="create-row-toggle">
+          <label class="create-toggle-label">
+            <span>プライバシーポリシーを表示</span>
+          </label>
+          <label class="toggle-switch"><input type="checkbox" id="newShowPrivacy" checked><span></span></label>
+        </div>
+        <div class="modal__field">
+          <input type="url" class="modal__input" id="newPrivacyUrl" placeholder="https://...">
+        </div>
+
+        <div class="create-row-toggle">
+          <label class="create-toggle-label">
+            <span>利用規約を表示</span>
+          </label>
+          <label class="toggle-switch"><input type="checkbox" id="newShowTerms" checked><span></span></label>
+        </div>
+        <div class="modal__field">
+          <input type="url" class="modal__input" id="newTermsUrl" placeholder="https://...">
+        </div>
+
+        <div class="modal__field">
+          <label>host_key（管理キー） <span style="color:var(--coral)">*</span></label>
+          <div style="display:flex;gap:6px;">
+            <input type="text" class="modal__input" id="newHostKey" placeholder="自動生成された値" minlength="8">
+            <button class="btn btn--ghost" id="genHostKeyBtn" type="button">再生成</button>
+          </div>
+          <div class="modal__hint">8文字以上。<b>絶対に公開しないでください</b>。後から確認はできません。</div>
+        </div>
+
       </div>
-      <div class="modal__hint">8文字以上。<b>絶対に公開しないでください</b>。後から確認はできません。</div>
+
+      <!-- プレビュー -->
+      <aside class="create-preview" aria-label="プレビュー">
+        <div class="create-preview__label">PREVIEW</div>
+        <div class="create-preview__card" id="previewCard">
+          <div class="create-preview__theme-bar" id="previewThemeBar"></div>
+          <div class="create-preview__name" id="previewName">イベント名</div>
+          <div class="create-preview__theme" id="previewTheme">テーマ・サブタイトル</div>
+          <div class="create-preview__meta">
+            <div class="create-preview__row"><span>背景テーマ</span><b id="previewThemeName">水族館ブルー</b></div>
+            <div class="create-preview__row"><span>登録番号</span><b id="previewReg">使用しない</b></div>
+            <div class="create-preview__row"><span>コメント</span><b id="previewComments">OFF</b></div>
+            <div class="create-preview__row"><span>プライバシーポリシー</span><b id="previewPrivacy">表示</b></div>
+            <div class="create-preview__row"><span>利用規約</span><b id="previewTerms">表示</b></div>
+          </div>
+        </div>
+      </aside>
     </div>
+
     <div class="modal__actions">
       <button class="btn btn--ghost" id="createCancel">キャンセル</button>
       <button class="btn" id="createConfirm">作成</button>
@@ -283,25 +440,31 @@ body{
     </div>
 
     <div class="url-row">
-      <div>
+      <div class="url-row__main">
         <div class="url-row__label">📱 参加者用URL</div>
         <div class="url-row__url" id="urlParticipant"></div>
       </div>
-      <button class="url-row__btn" data-copy="urlParticipant">コピー</button>
+      <div class="url-row__actions">
+        <button class="url-row__btn" data-copy="urlParticipant">コピー</button>
+      </div>
     </div>
     <div class="url-row">
-      <div>
+      <div class="url-row__main">
         <div class="url-row__label">🔒 ホスト用URL（host_key付き）</div>
         <div class="url-row__url" id="urlHost"></div>
       </div>
-      <button class="url-row__btn" data-copy="urlHost">コピー</button>
+      <div class="url-row__actions">
+        <button class="url-row__btn" data-copy="urlHost">コピー</button>
+      </div>
     </div>
     <div class="url-row">
-      <div>
+      <div class="url-row__main">
         <div class="url-row__label">🔑 host_key 単体</div>
         <div class="url-row__url" id="urlHostKey"></div>
       </div>
-      <button class="url-row__btn" data-copy="urlHostKey">コピー</button>
+      <div class="url-row__actions">
+        <button class="url-row__btn" data-copy="urlHostKey">コピー</button>
+      </div>
     </div>
 
     <div class="modal__actions">
@@ -575,14 +738,71 @@ function renderEvents(container, events) {
 // ============================================================
 // 新規作成
 // ============================================================
+// 既定URL
+const DEFAULT_PRIVACY_URL = 'https://www.weeek-end.com/privacy-policy/';
+const DEFAULT_TERMS_URL = 'https://www.weeek-end.com/riyou-kiyaku/';
+const THEME_NAMES = {
+  aquarium: '水族館ブルー',
+  family: 'ファミリー暖色',
+  corporate: '企業イベントシンプル',
+  spring: '春フェス',
+  night: 'ナイトイベント',
+};
+
+function updatePreview() {
+  const name = $('#newName').value.trim() || 'イベント名';
+  const theme = $('#newTheme').value.trim() || 'テーマ・サブタイトル';
+  const themePreset = $('#newThemePreset').value;
+  const enableReg = $('#newEnableReg').checked;
+  const enableComments = $('#newEnableComments').checked;
+  const showPrivacy = $('#newShowPrivacy').checked;
+  const showTerms = $('#newShowTerms').checked;
+
+  $('#previewName').textContent = name;
+  $('#previewTheme').textContent = theme;
+  $('#previewThemeName').textContent = THEME_NAMES[themePreset] || '水族館ブルー';
+  $('#previewReg').textContent = enableReg ? '使用する（必須）' : '使用しない';
+  $('#previewComments').textContent = enableComments ? 'ON' : 'OFF';
+  $('#previewPrivacy').textContent = showPrivacy ? '表示' : '非表示';
+  $('#previewTerms').textContent = showTerms ? '表示' : '非表示';
+  document.querySelector('.create-preview').dataset.theme = themePreset;
+}
+
 $('#newEventBtn').addEventListener('click', () => {
+  // 初期値リセット
   $('#newName').value = '';
   $('#newId').value = '';
   $('#newTheme').value = '家族の思い出';
+  $('#newThemePreset').value = 'aquarium';
+  $('#newEnableReg').checked = false;
+  $('#newEnableComments').checked = false;
+  $('#newShowPrivacy').checked = true;
+  $('#newShowTerms').checked = true;
+  $('#newPrivacyUrl').value = DEFAULT_PRIVACY_URL;
+  $('#newTermsUrl').value = DEFAULT_TERMS_URL;
   $('#newHostKey').value = genHostKey();
+  updatePreview();
   $('#createModal').classList.add('show');
   setTimeout(() => $('#newName').focus(), 100);
 });
+
+// プレビュー更新トリガー
+['#newName','#newTheme','#newThemePreset','#newEnableReg','#newEnableComments','#newShowPrivacy','#newShowTerms']
+  .forEach(sel => {
+    const el = $(sel);
+    el.addEventListener('input', updatePreview);
+    el.addEventListener('change', updatePreview);
+  });
+
+// 登録番号ONに切り替えた瞬間、プライバシー/利用規約チェックをOFFに
+$('#newEnableReg').addEventListener('change', (e) => {
+  if (e.target.checked) {
+    $('#newShowPrivacy').checked = false;
+    $('#newShowTerms').checked = false;
+    updatePreview();
+  }
+});
+
 $('#genHostKeyBtn').addEventListener('click', () => { $('#newHostKey').value = genHostKey(); });
 $('#createCancel').addEventListener('click', () => $('#createModal').classList.remove('show'));
 $('#newId').addEventListener('input', (e) => {
@@ -598,12 +818,29 @@ $('#createConfirm').addEventListener('click', async () => {
   if (!id || !/^[a-z0-9_-]+$/.test(id)) return showToast('IDは半角英数字とハイフン・アンダースコアのみ', true);
   if (hostKey.length < 8) return showToast('host_keyは8文字以上必要です', true);
 
+  // 追加設定値を集める
+  const extraSettings = {
+    theme_preset: $('#newThemePreset').value,
+    enable_registration_number: $('#newEnableReg').checked,
+    enable_comments: $('#newEnableComments').checked,
+    show_privacy_url: $('#newShowPrivacy').checked,
+    show_terms_url: $('#newShowTerms').checked,
+    privacy_policy_url: $('#newPrivacyUrl').value.trim() || DEFAULT_PRIVACY_URL,
+    terms_url: $('#newTermsUrl').value.trim() || DEFAULT_TERMS_URL,
+  };
+
   const btn = $('#createConfirm');
   btn.disabled = true; btn.textContent = '作成中...';
   try {
     const adminKey = await ensureAdminKey();
     if (!adminKey) { btn.disabled = false; btn.textContent = '作成'; return; }
     await DB.createEvent({ id, name, hostKey, adminKey, theme });
+    // 追加設定を保存（host_update_event経由）
+    try {
+      await DB.hostUpdateEvent(id, hostKey, extraSettings);
+    } catch (e) {
+      console.warn('追加設定の保存失敗（イベント作成は完了）:', e);
+    }
     $('#createModal').classList.remove('show');
     showUrlModal({ id, name }, hostKey);
     await loadEvents();
