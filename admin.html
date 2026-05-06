@@ -154,6 +154,23 @@ body{
   font-size:10px;font-weight:800;padding:3px 8px;border-radius:100px;
   letter-spacing:0.05em;
 }
+.photo-card.has-award{
+  outline:2px solid var(--coral);
+  outline-offset:-2px;
+}
+.photo-card__award-line{
+  margin-top:4px;
+  padding:5px 9px;
+  background:linear-gradient(135deg,#fff8e1,#ffefc4);
+  border-left:3px solid var(--coral);
+  border-radius:5px;
+  font-size:11px;color:var(--ink);font-weight:700;
+}
+.photo-card__award-line b{color:var(--coral);font-weight:800;margin-left:2px}
+.photo-card__btn.active{
+  background:var(--coral);color:white;border-color:var(--coral);
+  font-weight:800;
+}
 
 /* 通報リスト */
 .report-item{
@@ -1125,6 +1142,11 @@ function updateResultPublishUI() {
 async function loadPhotos() {
   try {
     state.photos = await DB.hostListPhotosWithIdentifiers(EVENT_ID, HOST_KEY);
+    console.log('[ADMIN PHOTO AWARDS]', (state.photos || []).map(p => ({
+      id: p.photo_id || p.id,
+      nickname: p.nickname,
+      award_title: p.award_title
+    })));
     renderPhotos();
     renderStats();
   } catch (err) {
@@ -1182,7 +1204,7 @@ function renderPhotos() {
     const hasReports = Number(p.report_count) > 0;
     const award = p.award_title || '';
     return `
-      <div class="photo-card ${isHidden ? 'hidden-status' : ''} ${hasReports ? 'has-reports' : ''}">
+      <div class="photo-card ${isHidden ? 'hidden-status' : ''} ${hasReports ? 'has-reports' : ''} ${award ? 'has-award' : ''}">
         <img src="${escapeHtml(p.image_url)}" alt="">
         ${hasReports ? `<div class="photo-card__badge">通報${p.report_count}</div>` : ''}
         ${award ? `<div class="photo-card__award">🎖 ${escapeHtml(award)}</div>` : ''}
@@ -1194,13 +1216,14 @@ function renderPhotos() {
             ${isDeleted ? '<span style="color:var(--red);font-weight:700;">削除</span>' : ''}
           </div>
           ${p.registration_number ? `<div style="font-size:10px;color:var(--ink-3);">登録番号: ${escapeHtml(p.registration_number)}</div>` : ''}
+          ${award ? `<div class="photo-card__award-line">🏅 主催者賞：<b>${escapeHtml(award)}</b></div>` : ''}
           <div class="photo-card__actions" style="margin-top:6px;">
             ${isHidden
               ? `<button class="photo-card__btn" data-action="unhide" data-id="${escapeHtml(p.photo_id)}">表示</button>`
               : `<button class="photo-card__btn" data-action="hide" data-id="${escapeHtml(p.photo_id)}">非表示</button>`}
             <button class="photo-card__btn danger" data-action="delete" data-id="${escapeHtml(p.photo_id)}">削除</button>
             ${award
-              ? `<button class="photo-card__btn" data-action="unaward" data-id="${escapeHtml(p.photo_id)}">🎖 賞変更/解除</button>`
+              ? `<button class="photo-card__btn active" data-action="unaward" data-id="${escapeHtml(p.photo_id)}">🎖 賞変更/解除</button>`
               : `<button class="photo-card__btn" data-action="award" data-id="${escapeHtml(p.photo_id)}">🎖 賞</button>`}
           </div>
         </div>

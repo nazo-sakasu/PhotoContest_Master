@@ -82,6 +82,26 @@ body{
   overflow-y:hidden;
   position:relative;
 }
+
+/* === 初期化中：チラつき防止 ===
+   イベント設定取得・テーマ反映が完了するまで .frame と #nameModal を隠す。
+   背景の var(--sea) だけ見せる。 */
+body.is-initializing .frame,
+body.is-initializing #nameModal{
+  visibility:hidden;
+}
+.app-loader{
+  position:fixed;inset:0;display:none;align-items:center;justify-content:center;
+  z-index:99999;pointer-events:none;
+}
+body.is-initializing .app-loader{display:flex}
+.app-loader__spinner{
+  width:36px;height:36px;border-radius:50%;
+  border:3px solid rgba(255,255,255,0.18);
+  border-top-color:rgba(255,255,255,0.7);
+  animation:appLoaderSpin 0.9s linear infinite;
+}
+@keyframes appLoaderSpin{to{transform:rotate(360deg)}}
 /* グローバル：横はみ出し完全防止 */
 img,video,canvas{max-width:100%;height:auto}
 button,input,select,textarea{font-size:16px;max-width:100%}
@@ -479,7 +499,11 @@ button,input,select,textarea{font-size:16px;max-width:100%}
 .result__award-name{font-size:13px;font-weight:700;color:var(--ink-2);text-align:center}
 </style>
 </head>
-<body>
+<body class="is-initializing" data-theme="aquarium">
+
+<div class="app-loader" aria-hidden="true">
+  <div class="app-loader__spinner"></div>
+</div>
 
 <div class="frame">
 
@@ -850,6 +874,7 @@ async function init() {
     state.event = await DB.getEvent(EVENT_ID);
     if (!state.event) {
       showToast('イベントが見つかりません', true);
+      document.body.classList.remove('is-initializing');
       return;
     }
 
@@ -909,9 +934,14 @@ async function init() {
         window.__wasDisc = true;
       },
     });
+
+    // === 初期化完了：チラつき防止クラスを外す ===
+    document.body.classList.remove('is-initializing');
   } catch (err) {
     console.error(err);
     showToast('初期化失敗：' + errMsg(err), true);
+    // エラー時もローダーを外して画面を表示する（白画面のまま放置しない）
+    document.body.classList.remove('is-initializing');
   }
 }
 
