@@ -681,6 +681,57 @@ const state = {
 localStorage.setItem('pc_user_' + EVENT_ID, state.userId);
 
 // ============================================================
+// 参加情報ヘルパー
+// ============================================================
+function getSavedIdentifiers() {
+  let identifiers = state.identifiers || {};
+  if (!identifiers || Object.keys(identifiers).length === 0) {
+    try {
+      const saved = localStorage.getItem('pc_ids_' + EVENT_ID);
+      if (saved) identifiers = JSON.parse(saved) || {};
+    } catch {}
+  }
+  state.identifiers = identifiers || {};
+  return state.identifiers;
+}
+
+function validateRequiredIdentifiers() {
+  const ev = state.event;
+  if (!ev) return '';
+  const identifiers = getSavedIdentifiers();
+  if (ev.enable_registration_number && !identifiers.registration_number) return '登録番号を入力してください';
+  if (ev.require_phone && !identifiers.phone) return '電話番号を入力してください';
+  if (ev.require_employee_id && !identifiers.employee_id) return '社員番号を入力してください';
+  if (ev.require_email && !identifiers.email) return 'メールアドレスを入力してください';
+  return '';
+}
+
+function hasRequiredParticipantInfo() {
+  if (!state.nickname) return false;
+  if (!state.event) return false;
+  const ev = state.event;
+  const ids = getSavedIdentifiers();
+  if (ev.enable_registration_number && !ids.registration_number) return false;
+  if (ev.require_phone && !ids.phone) return false;
+  if (ev.require_employee_id && !ids.employee_id) return false;
+  if (ev.require_email && !ids.email) return false;
+  return true;
+}
+
+function reopenNameModalForMissingInfo(message) {
+  showToast(message || '参加情報の入力が必要です', true);
+  $('#nameModal').classList.remove('hidden');
+  setupNameModal();
+  // 既存値を入力欄に復元（識別情報は削除しない）
+  const ids = getSavedIdentifiers();
+  if (state.nickname && $('#nicknameInput')) $('#nicknameInput').value = state.nickname;
+  if ($('#regNumberInput') && ids.registration_number) $('#regNumberInput').value = ids.registration_number;
+  if ($('#phoneInput') && ids.phone) $('#phoneInput').value = ids.phone;
+  if ($('#employeeIdInput') && ids.employee_id) $('#employeeIdInput').value = ids.employee_id;
+  if ($('#emailInput') && ids.email) $('#emailInput').value = ids.email;
+}
+
+// ============================================================
 // ユーティリティ
 // ============================================================
 function showToast(msg, isError = false) {
@@ -799,11 +850,24 @@ async function init() {
     // 名前入力モーダルの設定
     setupNameModal();
 
-    if (state.nickname) {
+    console.log('[PARTICIPANT INFO CHECK]', {
+      nickname: state.nickname,
+      identifiers: state.identifiers,
+      hasRequiredParticipantInfo: hasRequiredParticipantInfo()
+    });
+
+    if (hasRequiredParticipantInfo()) {
       $('#nameModal').classList.add('hidden');
       onUserReady();
     } else {
       $('#nameModal').classList.remove('hidden');
+      // 既存値を復元
+      if (state.nickname && $('#nicknameInput')) $('#nicknameInput').value = state.nickname;
+      const ids = getSavedIdentifiers();
+      if ($('#regNumberInput') && ids.registration_number) $('#regNumberInput').value = ids.registration_number;
+      if ($('#phoneInput') && ids.phone) $('#phoneInput').value = ids.phone;
+      if ($('#employeeIdInput') && ids.employee_id) $('#employeeIdInput').value = ids.employee_id;
+      if ($('#emailInput') && ids.email) $('#emailInput').value = ids.email;
     }
 
     // データロード
@@ -906,8 +970,9 @@ function setupNameModal() {
     $('#nicknameInput').value = state.nickname;
   }
 
-  $('#nameSubmit').addEventListener('click', submitNameForm);
-  $('#nicknameInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('#regNumberInput').focus?.(); });
+  // 二重バインド防止：onclick方式で確実に1回だけ
+  $('#nameSubmit').onclick = submitNameForm;
+  $('#nicknameInput').onkeydown = (e) => { if (e.key === 'Enter') $('#regNumberInput')?.focus?.(); };
 }
 
 async function submitNameForm() {
@@ -1091,7 +1156,23 @@ function clearPreview() {
 $('#submitBtn').addEventListener('click', async () => {
   if (state.uploading) return;
   if (!state.selectedFile) return;
-  if (!state.nickname) { showToast('ニックネーム未設定', true); return; }
+  if (!state.nickname) {
+    reopenNameModalForMissingInfo('ニックネームを入力してください');
+    return;
+  }
+
+  // === Storageアップロード前に必須項目チェック ===
+  // 不足があった場合、Storageに孤児画像を作らずに名前モーダルへ戻す
+  const validationError = validateRequiredIdentifiers();
+  console.log('[PRE UPLOAD CHECK]', {
+    nickname: state.nickname,
+    identifiers: getSavedIdentifiers(),
+    validationError: validationError
+  });
+  if (validationError) {
+    reopenNameModalForMissingInfo(validationError);
+    return;
+  }
 
   state.uploading = true;
   const btn = $('#submitBtn');
@@ -1099,34 +1180,14 @@ $('#submitBtn').addEventListener('click', async () => {
   btn.textContent = 'アップロード中...';
 
   try {
+    // 識別情報は事前チェック済み
+    const identifiers = getSavedIdentifiers();
+
     // 画像圧縮
     const compressed = await compressImage(state.selectedFile, 1200, 0.8);
 
     // Storageにアップロード
     const { path, url } = await DB.uploadImage(EVENT_ID, compressed);
-
-    // identifiers をlocalStorageから復元（メモリ上state.identifiersが空の場合の保険）
-    let identifiers = state.identifiers || {};
-    if (!identifiers || Object.keys(identifiers).length === 0) {
-      try {
-        const saved = localStorage.getItem('pc_ids_' + EVENT_ID);
-        if (saved) {
-          identifiers = JSON.parse(saved) || {};
-          state.identifiers = identifiers;  // メモリにも復元
-        }
-      } catch {}
-    }
-
-    // ここで必須項目を再チェック（イベント設定変更時の保険）
-    const ev = state.event;
-    if (ev.enable_registration_number && !identifiers.registration_number) {
-      throw new Error('REOPEN_NAME_MODAL');
-    }
-    if (ev.require_phone && !identifiers.phone) throw new Error('REOPEN_NAME_MODAL');
-    if (ev.require_employee_id && !identifiers.employee_id) throw new Error('REOPEN_NAME_MODAL');
-    if (ev.require_email && !identifiers.email) throw new Error('REOPEN_NAME_MODAL');
-
-    console.log('[SUBMIT IDENTIFIERS]', identifiers);
 
     // RPC呼び出し
     let photoId;
@@ -1154,18 +1215,18 @@ $('#submitBtn').addEventListener('click', async () => {
     localStorage.setItem(postedKey, JSON.stringify(postedIds));
 
     showToast('投稿完了！');
-    showSubmitFx();  // 投稿完了演出
+    showSubmitFx();
     clearPreview();
     await loadPhotos();
   } catch (err) {
     console.error(err);
-    if ((err.message || '') === 'REOPEN_NAME_MODAL') {
-      showToast('参加情報の入力が必要です', true);
-      // localStorageの保存値だけクリアして再入力させる
-      localStorage.removeItem('pc_ids_' + EVENT_ID);
-      state.identifiers = {};
-      $('#nameModal').classList.remove('hidden');
-      setupNameModal();
+    const m = err.message || '';
+    // RPC側で識別情報不足が返ってきた場合（イベント設定変更時の保険）
+    if (m.includes('registration_number_required') || m.includes('phone_required') ||
+        m.includes('employee_id_required') || m.includes('email_required') ||
+        m === 'REOPEN_NAME_MODAL') {
+      // 識別情報は削除しない（一部入力済みの値を保持）
+      reopenNameModalForMissingInfo('参加情報の入力が必要です');
     } else {
       showToast(errMsg(err), true);
     }
