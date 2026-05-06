@@ -1200,7 +1200,7 @@ function renderPhotos() {
               : `<button class="photo-card__btn" data-action="hide" data-id="${escapeHtml(p.photo_id)}">非表示</button>`}
             <button class="photo-card__btn danger" data-action="delete" data-id="${escapeHtml(p.photo_id)}">削除</button>
             ${award
-              ? `<button class="photo-card__btn" data-action="unaward" data-id="${escapeHtml(p.photo_id)}">賞解除</button>`
+              ? `<button class="photo-card__btn" data-action="unaward" data-id="${escapeHtml(p.photo_id)}">🎖 賞変更/解除</button>`
               : `<button class="photo-card__btn" data-action="award" data-id="${escapeHtml(p.photo_id)}">🎖 賞</button>`}
           </div>
         </div>
@@ -1231,19 +1231,22 @@ async function onPhotoAction(action, photoId) {
       showToast('削除しました');
       await loadPhotos();
     });
-  } else if (action === 'award') {
-    const title = prompt('賞のタイトルを入力\n例：主催者賞 / ベストスマイル賞 / ファミリー賞 / ユーモア賞', '主催者賞');
-    if (!title) return;
+  } else if (action === 'award' || action === 'unaward') {
+    // 既存の賞名を取得（変更時は初期値として使用）
+    const currentPhoto = (state.photos || []).find(p => p.photo_id === photoId);
+    const currentAward = (currentPhoto && currentPhoto.award_title) || '';
+    const defaultValue = currentAward || '主催者賞';
+    const promptMsg = currentAward
+      ? `現在の賞：「${currentAward}」\n\n変更する場合は新しい賞名を、解除する場合は空欄で OK を押してください。\n例：竹島賞 / ベストスマイル賞 / ファミリー賞 / ユーモア賞`
+      : '賞のタイトルを入力\n例：主催者賞 / 竹島賞 / ベストスマイル賞 / ファミリー賞';
+    const title = prompt(promptMsg, defaultValue);
+    if (title === null) return;  // キャンセル時のみ無視
+    const trimmed = title.trim();
     try {
-      await DB.hostSetAward(EVENT_ID, HOST_KEY, photoId, title.trim());
-      showToast(`「${title}」を設定しました`);
-      await loadPhotos();
-    } catch (err) { showToast(errMsg(err), true); }
-  } else if (action === 'unaward') {
-    if (!confirm('賞を解除しますか？')) return;
-    try {
-      await DB.hostSetAward(EVENT_ID, HOST_KEY, photoId, '');
-      showToast('賞を解除しました');
+      await DB.hostSetAward(EVENT_ID, HOST_KEY, photoId, trimmed);
+      console.log('[AWARD SAVED]', { photo_id: photoId, award_title: trimmed });
+      if (trimmed) showToast(`「${trimmed}」を設定しました`);
+      else showToast('賞を解除しました');
       await loadPhotos();
     } catch (err) { showToast(errMsg(err), true); }
   }
@@ -1366,7 +1369,7 @@ $('#saveScheduleBtn').addEventListener('click', async () => {
 $('#saveSettingsBtn').addEventListener('click', async () => {
   try {
     const publishAtRaw = $('#resultsPublishAt').value;
-    await DB.hostUpdateEvent(EVENT_ID, HOST_KEY, {
+    const patch = {
       enable_registration_number: $('#enableRegNumber').checked,
       registration_label: $('#regLabel').value.trim() || '登録番号',
       require_phone: $('#reqPhone').checked,
@@ -1380,9 +1383,19 @@ $('#saveSettingsBtn').addEventListener('click', async () => {
       theme_preset: $('#themePreset').value,
       max_uploads_per_user: parseInt($('#maxUploads').value) || 5,
       auto_hide_report_threshold: parseInt($('#autoHideThreshold').value) || 0,
+    };
+    console.log('[SAVE RESULT SETTINGS]', {
+      result_publish_mode: patch.result_publish_mode,
+      results_publish_at: patch.results_publish_at,
     });
+    await DB.hostUpdateEvent(EVENT_ID, HOST_KEY, patch);
     showToast('機能設定を保存しました');
     state.event = await DB.hostGetEvent(EVENT_ID, HOST_KEY);
+    console.log('[LOADED EVENT RESULT SETTINGS]', {
+      result_publish_mode: state.event.result_publish_mode,
+      results_published: state.event.results_published,
+      results_publish_at: state.event.results_publish_at,
+    });
     renderHeader();
     renderSettings();
   } catch (err) { showToast(errMsg(err), true); }

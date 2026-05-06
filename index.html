@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>フォトコンテスト</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;700;800&family=Noto+Sans+JP:wght@400;500;700;800&display=swap" rel="stylesheet">
@@ -70,6 +70,8 @@ html,body{
   width:100%;
   max-width:100%;
   overflow-x:hidden;
+  touch-action:manipulation;
+  -webkit-text-size-adjust:100%;
 }
 body{
   background:var(--sea);color:var(--ink);
@@ -79,6 +81,16 @@ body{
   overflow-x:hidden;
   overflow-y:hidden;
   position:relative;
+}
+/* グローバル：横はみ出し完全防止 */
+img,video,canvas{max-width:100%;height:auto}
+button,input,select,textarea{font-size:16px;max-width:100%}
+.result__rank,.result__award,.photo-card,
+.notice,.uploader,.upload__meta,.btn-primary,
+.gallery,.tabs,.tab,.detail__name,.comment{
+  max-width:100%;
+  overflow-wrap:anywhere;
+  word-break:break-word;
 }
 .frame{
   position:relative;width:100%;height:100dvh;max-width:480px;
@@ -829,6 +841,11 @@ function errMsg(err) {
 // ============================================================
 async function init() {
   console.log('[INDEX VERSION] 2026-05-05-layout-mask-fix');
+  console.log('[VIEWPORT CHECK]', {
+    innerWidth: window.innerWidth,
+    documentWidth: document.documentElement.scrollWidth,
+    bodyWidth: document.body.scrollWidth,
+  });
   try {
     state.event = await DB.getEvent(EVENT_ID);
     if (!state.event) {
