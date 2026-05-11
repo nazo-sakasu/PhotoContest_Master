@@ -554,16 +554,6 @@ button,input,select,textarea{font-size:16px;max-width:100%}
   text-align:center;color:rgba(255,255,255,0.7);
   font-size:12px;font-weight:600;letter-spacing:0.1em;
 }
-.slideshow__speed{
-  display:flex;justify-content:center;align-items:center;gap:8px;
-  margin-top:10px;color:rgba(255,255,255,0.8);font-size:12px;font-weight:600;
-}
-.slideshow__speed select{
-  background:rgba(255,255,255,0.12);color:white;
-  border:1px solid rgba(255,255,255,0.25);border-radius:6px;
-  padding:6px 10px;font-family:inherit;font-size:13px;font-weight:700;
-}
-.slideshow__speed select option{background:#1a1a1a;color:white}
 .slideshow__close{
   position:absolute;top:calc(14px + env(safe-area-inset-top));right:14px;
   width:40px;height:40px;border-radius:50%;
@@ -767,14 +757,6 @@ button,input,select,textarea{font-size:16px;max-width:100%}
     <button class="slideshow__btn" id="slideshowNext" type="button" aria-label="次へ">▶</button>
   </div>
   <div class="slideshow__counter" id="slideshowCounter">1 / 1</div>
-  <div class="slideshow__speed">
-    <label for="slideshowSpeed">表示時間：</label>
-    <select id="slideshowSpeed">
-      <option value="3000">3秒</option>
-      <option value="4000">4秒</option>
-      <option value="5000">5秒</option>
-    </select>
-  </div>
   <button class="slideshow__close" id="slideshowClose" type="button" aria-label="閉じる">✕</button>
 </div>
 
@@ -930,13 +912,10 @@ async function toggleBgm() {
 // スライドショー
 // ============================================================
 const DEFAULT_SLIDESHOW_INTERVAL_MS = 3000;
-let slideshowIntervalMs = (() => {
-  try {
-    const v = Number(localStorage.getItem('slideshow_interval_ms'));
-    if (v === 3000 || v === 4000 || v === 5000) return v;
-  } catch {}
-  return DEFAULT_SLIDESHOW_INTERVAL_MS;
-})();
+function getSlideshowIntervalMs() {
+  const v = Number(state.event?.slideshow_interval_ms);
+  return [3000, 4000, 5000].includes(v) ? v : DEFAULT_SLIDESHOW_INTERVAL_MS;
+}
 const slideshowState = { photos: [], idx: 0, timer: null, paused: false };
 
 function startSlideshow() {
@@ -970,7 +949,7 @@ function renderSlideshow() {
 function startSlideshowTimer() {
   stopSlideshowTimer();
   if (slideshowState.paused) return;
-  slideshowState.timer = setInterval(() => slideshowStep(1), slideshowIntervalMs);
+  slideshowState.timer = setInterval(() => slideshowStep(1), getSlideshowIntervalMs());
 }
 
 function stopSlideshowTimer() {
@@ -1104,19 +1083,6 @@ async function init() {
   $('#slideshowPrev')?.addEventListener('click', () => slideshowStep(-1));
   $('#slideshowNext')?.addEventListener('click', () => slideshowStep(1));
   $('#slideshowPause')?.addEventListener('click', toggleSlideshowPause);
-  // 表示時間セレクト：初期値反映＋変更時にタイマー再構築
-  const speedSel = $('#slideshowSpeed');
-  if (speedSel) {
-    speedSel.value = String(slideshowIntervalMs);
-    speedSel.addEventListener('change', () => {
-      slideshowIntervalMs = Number(speedSel.value) || DEFAULT_SLIDESHOW_INTERVAL_MS;
-      try { localStorage.setItem('slideshow_interval_ms', String(slideshowIntervalMs)); } catch {}
-      // 一時停止中なら次回再開時に反映、再生中なら即時反映
-      if (!slideshowState.paused && $('#slideshow').classList.contains('show')) {
-        startSlideshowTimer();
-      }
-    });
-  }
   try {
     state.event = await DB.getEvent(EVENT_ID);
     if (!state.event) {

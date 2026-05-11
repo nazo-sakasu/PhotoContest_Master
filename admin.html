@@ -738,6 +738,17 @@ body{
             <option value="festival">フェスティバルポップ</option>
           </select>
         </div>
+        <div class="row">
+          <div>
+            <div class="row__label">スライドショー表示時間</div>
+            <div class="row__hint">1枚あたりの表示時間</div>
+          </div>
+          <select class="select" id="slideshowIntervalMs" style="max-width:180px;">
+            <option value="3000">3秒</option>
+            <option value="4000">4秒</option>
+            <option value="5000">5秒</option>
+          </select>
+        </div>
         <button class="btn btn--full" id="saveSettingsBtn" style="margin-top:8px;">機能設定を保存</button>
       </div>
 
@@ -1095,6 +1106,9 @@ function renderSettings() {
   $('#resultsPublishAt').value = fmtDateTimeLocal(ev.results_publish_at);
   updateResultPublishUI();
   $('#themePreset').value = ev.theme_preset || 'aquarium';
+  // スライドショー表示時間（3000/4000/5000のみ許可）
+  const sm = Number(ev.slideshow_interval_ms);
+  $('#slideshowIntervalMs').value = [3000,4000,5000].includes(sm) ? String(sm) : '3000';
   $('#maxUploads').value = ev.max_uploads_per_user || 5;
   $('#autoHideThreshold').value = ev.auto_hide_report_threshold || 0;
   $('#retentionMode').value = ev.retention_mode || 'manual';
@@ -1444,6 +1458,7 @@ $('#saveSettingsBtn').addEventListener('click', async () => {
       theme_preset: $('#themePreset').value,
       max_uploads_per_user: parseInt($('#maxUploads').value) || 5,
       auto_hide_report_threshold: parseInt($('#autoHideThreshold').value) || 0,
+      slideshow_interval_ms: parseInt($('#slideshowIntervalMs').value) || 3000,
     };
     console.log('[SAVE RESULT SETTINGS]', {
       result_publish_mode: patch.result_publish_mode,
