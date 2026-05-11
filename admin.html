@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;700;800&family=Noto+Sans+JP:wght@500;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="config.js"></script>
 <script src="db.js"></script>
 <style>
@@ -193,6 +194,24 @@ body{
   cursor:pointer;border-radius:var(--r);transition:all 0.2s;
 }
 .flow-btn:hover{background:var(--sand-2);border-color:var(--ink)}
+
+/* 出力・ダウンロード */
+.export-grid{display:grid;grid-template-columns:1fr;gap:8px}
+.export-btn{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:12px 14px;background:white;border:1px solid var(--line);
+  border-radius:var(--r);font-family:inherit;font-size:13px;font-weight:700;
+  color:var(--ink);cursor:pointer;text-align:left;gap:10px;
+}
+.export-btn:hover{background:var(--sand-2);border-color:var(--ink)}
+.export-btn:disabled{opacity:0.6;cursor:wait}
+.export-btn__label{flex:1}
+.export-btn__tag{
+  font-size:10px;font-weight:700;padding:3px 8px;border-radius:100px;
+  white-space:nowrap;
+}
+.export-btn__tag--free{background:#d8eedd;color:#1a6b3c}
+.export-btn__tag--paid{background:#ffe4b8;color:#8a5a00}
 .flow-btn.active{background:var(--ink);color:white;border-color:var(--ink)}
 
 /* タブ */
@@ -551,6 +570,25 @@ body{
           <button class="flow-btn" data-status="active">公開</button>
           <button class="flow-btn" data-status="archived">アーカイブ</button>
           <button class="flow-btn" id="resultPreviewBtn">結果プレビュー</button>
+        </div>
+      </div>
+
+      <!-- 出力・ダウンロード -->
+      <div class="section">
+        <div class="section__h">出力・ダウンロード</div>
+        <div class="export-grid">
+          <button class="export-btn" id="exportAwardPdfBtn" type="button">
+            <span class="export-btn__label">📄 入賞結果PDF</span>
+            <span class="export-btn__tag export-btn__tag--free">基本プラン</span>
+          </button>
+          <button class="export-btn" id="exportAllJpgZipBtn" type="button">
+            <span class="export-btn__label">🗂 全投稿JPG一括DL</span>
+            <span class="export-btn__tag export-btn__tag--paid">オプション +2万円相当</span>
+          </button>
+          <button class="export-btn" id="exportAllPdfBtn" type="button">
+            <span class="export-btn__label">📄 全投稿PDF出力</span>
+            <span class="export-btn__tag export-btn__tag--paid">オプション +1万円相当</span>
+          </button>
         </div>
       </div>
 
@@ -1594,6 +1632,218 @@ $$('[data-copy]').forEach(b => {
   }
   $('#authInput').focus();
 })();
+
+// ============================================================
+// 出力・ダウンロード機能
+// ============================================================
+const PDF_RANK_LIMIT = 3;
+
+function sanitizeFilename(s) {
+  return String(s || '').replace(/[\\/:*?"<>|]/g, '_').replace(/\s+/g, '_').slice(0, 60);
+}
+
+function buildPrintWindow(title, bodyHtml) {
+  const w = window.open('', '_blank');
+  if (!w) { showToast('ポップアップがブロックされました', true); return null; }
+  w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(title)}</title>
+<style>
+  @page { size: A4 portrait; margin: 14mm; }
+  body { font-family: 'Noto Sans JP',sans-serif; color:#15171c; margin:0; padding:0; background:white; }
+  .pdf-header { text-align:center; margin-bottom:24px; padding-bottom:14px; border-bottom:2px solid #d65a3a; }
+  .pdf-title { font-size:24px; font-weight:800; margin:0 0 6px; color:#0a3d52; }
+  .pdf-sub { font-size:13px; color:#6c7d8a; margin:0; }
+  .pdf-date { font-size:11px; color:#6c7d8a; margin-top:8px; }
+  .pdf-section { margin-top:28px; }
+  .pdf-section-h { font-size:18px; font-weight:800; color:#0a3d52; padding-bottom:6px;
+    border-bottom:2px solid #d65a3a; margin-bottom:14px; }
+  .rank-row { display:flex; gap:18px; margin-bottom:18px; align-items:flex-start;
+    page-break-inside:avoid; padding:14px; background:#faf6ec; border-radius:10px; }
+  .rank-num { font-size:42px; font-weight:800; color:#d65a3a; min-width:60px; text-align:center; }
+  .rank-num--1 { font-size:54px; color:#d4a93f; }
+  .rank-img { width:160px; height:160px; object-fit:cover; border-radius:8px; }
+  .rank-info { flex:1; }
+  .rank-name { font-size:16px; font-weight:800; margin-bottom:6px; }
+  .rank-likes { font-size:13px; color:#6c7d8a; }
+  .award-card { padding:14px; background:#fff8e1; border-left:4px solid #d65a3a;
+    border-radius:8px; margin-bottom:14px; page-break-inside:avoid; }
+  .award-title-tag { display:inline-block; background:#d65a3a; color:white;
+    font-size:11px; font-weight:800; padding:4px 12px; border-radius:100px; margin-bottom:10px; }
+  .award-img { max-width:240px; height:auto; border-radius:6px; display:block; margin-bottom:8px; }
+  .award-name { font-size:13px; font-weight:700; }
+  .all-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:14px; }
+  .all-card { page-break-inside:avoid; border:1px solid #e5dfd0; padding:10px;
+    border-radius:6px; background:white; }
+  .all-img { width:100%; aspect-ratio:4/3; object-fit:cover; border-radius:4px; margin-bottom:6px; }
+  .all-meta { font-size:11px; font-weight:700; }
+  .all-likes { font-size:10px; color:#6c7d8a; font-weight:600; }
+  .all-award-tag { display:inline-block; background:#d65a3a; color:white;
+    font-size:9px; font-weight:800; padding:2px 6px; border-radius:100px; }
+  .pdf-footer { margin-top:30px; padding-top:10px; border-top:1px solid #e5dfd0;
+    text-align:center; font-size:10px; color:#999; }
+  @media print { .no-print { display:none; } }
+  .no-print { position:fixed; top:12px; right:12px; padding:10px 16px;
+    background:#0a3d52; color:white; border:none; border-radius:6px; cursor:pointer;
+    font-family:'Noto Sans JP',sans-serif; font-weight:700; box-shadow:0 4px 16px rgba(0,0,0,0.2); }
+</style></head><body>
+<button class="no-print" onclick="window.print()">🖨 PDF保存 / 印刷</button>
+${bodyHtml}
+</body></html>`);
+  w.document.close();
+  return w;
+}
+
+// === 1. 入賞結果PDF（基本プラン） ===
+$('#exportAwardPdfBtn')?.addEventListener('click', () => {
+  const photos = (state.photos || []).filter(p => p.status === 'active');
+  if (photos.length === 0) { showToast('対象の写真がありません', true); return; }
+  const showAuthor = state.event.show_author_name !== false;
+  const sorted = [...photos].sort((a, b) => (b.like_count || 0) - (a.like_count || 0));
+  const top = sorted.slice(0, PDF_RANK_LIMIT);
+  const awarded = photos.filter(p => p.award_title);
+  const evName = escapeHtml(state.event.name || 'フォトコンテスト');
+  const evTheme = escapeHtml(state.event.theme || '');
+  const today = new Date().toLocaleString('ja-JP');
+
+  let html = `<div class="pdf-header">
+    <div class="pdf-title">${evName}</div>
+    ${evTheme ? `<div class="pdf-sub">${evTheme}</div>` : ''}
+    <div class="pdf-date">出力日時：${today}</div>
+  </div>`;
+
+  if (top.length > 0) {
+    html += `<div class="pdf-section"><div class="pdf-section-h">🏆 ランキング</div>`;
+    top.forEach((p, i) => {
+      const rank = i + 1;
+      html += `<div class="rank-row">
+        <div class="rank-num rank-num--${rank}">${rank}</div>
+        <img class="rank-img" src="${escapeHtml(p.image_url)}" alt="">
+        <div class="rank-info">
+          ${showAuthor ? `<div class="rank-name">${escapeHtml(p.nickname)}</div>` : ''}
+          <div class="rank-likes">❤ ${p.like_count || 0}</div>
+        </div>
+      </div>`;
+    });
+    html += `</div>`;
+  }
+
+  if (awarded.length > 0) {
+    html += `<div class="pdf-section"><div class="pdf-section-h">🎖 主催者賞</div>`;
+    awarded.forEach(p => {
+      html += `<div class="award-card">
+        <div class="award-title-tag">${escapeHtml(p.award_title)}</div>
+        <img class="award-img" src="${escapeHtml(p.image_url)}" alt="">
+        ${showAuthor ? `<div class="award-name">${escapeHtml(p.nickname)}</div>` : ''}
+      </div>`;
+    });
+    html += `</div>`;
+  }
+
+  html += `<div class="pdf-footer">Photo Contest Report</div>`;
+  buildPrintWindow(`入賞結果 - ${state.event.name}`, html);
+});
+
+// === 2. 全投稿写真JPG一括DL（オプション） ===
+$('#exportAllJpgZipBtn')?.addEventListener('click', async (e) => {
+  if (typeof JSZip === 'undefined') {
+    showToast('ZIPライブラリ読み込みに失敗', true); return;
+  }
+  const photos = (state.photos || []).filter(p => p.status === 'active');
+  if (photos.length === 0) { showToast('対象の写真がありません', true); return; }
+  if (!confirm(`${photos.length}件の写真をZIPでダウンロードします。よろしいですか？`)) return;
+
+  const btn = e.currentTarget;
+  btn.disabled = true;
+  const origLabel = btn.querySelector('.export-btn__label').textContent;
+  btn.querySelector('.export-btn__label').textContent = '作成中...';
+
+  const zip = new JSZip();
+  let okCount = 0, skipCount = 0;
+  for (let i = 0; i < photos.length; i++) {
+    const p = photos[i];
+    btn.querySelector('.export-btn__label').textContent = `作成中... ${i+1}/${photos.length}`;
+    try {
+      const res = await fetch(p.image_url, { mode: 'cors' });
+      if (!res.ok) throw new Error('fetch failed');
+      const blob = await res.blob();
+      // JPGに変換
+      const jpgBlob = await convertToJpg(blob);
+      const idx = String(i+1).padStart(3, '0');
+      const regNum = p.registration_number ? '_' + sanitizeFilename(p.registration_number) : '';
+      const filename = `${idx}_${sanitizeFilename(p.nickname)}${regNum}.jpg`;
+      zip.file(filename, jpgBlob);
+      okCount++;
+    } catch (err) {
+      console.warn('スキップ:', p.photo_id, err);
+      skipCount++;
+    }
+  }
+
+  try {
+    const out = await zip.generateAsync({ type: 'blob' });
+    const url = URL.createObjectURL(out);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `photos_${state.event.id || 'event'}_${Date.now()}.zip`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    showToast(`完了 (成功${okCount}件 / スキップ${skipCount}件)`);
+  } catch (err) {
+    showToast('ZIP生成失敗: ' + err.message, true);
+  } finally {
+    btn.disabled = false;
+    btn.querySelector('.export-btn__label').textContent = origLabel;
+  }
+});
+
+async function convertToJpg(blob) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth; canvas.height = img.naturalHeight;
+      const ctx = canvas.getContext('2d');
+      // JPEGには透明度がないので白背景を敷く
+      ctx.fillStyle = 'white';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0);
+      canvas.toBlob(b => b ? resolve(b) : reject(new Error('toBlob failed')), 'image/jpeg', 0.92);
+    };
+    img.onerror = () => reject(new Error('image load failed'));
+    img.src = URL.createObjectURL(blob);
+  });
+}
+
+// === 3. 全投稿PDF出力（オプション） ===
+$('#exportAllPdfBtn')?.addEventListener('click', () => {
+  const photos = (state.photos || []).filter(p => p.status === 'active');
+  if (photos.length === 0) { showToast('対象の写真がありません', true); return; }
+  if (photos.length > 50) {
+    if (!confirm(`${photos.length}枚はPDFが重くなる可能性があります。続行しますか？`)) return;
+  }
+  const showAuthor = state.event.show_author_name !== false;
+  const evName = escapeHtml(state.event.name || 'フォトコンテスト');
+  const today = new Date().toLocaleString('ja-JP');
+
+  let html = `<div class="pdf-header">
+    <div class="pdf-title">${evName}</div>
+    <div class="pdf-sub">全投稿写真一覧</div>
+    <div class="pdf-date">出力日時：${today} ／ 全${photos.length}件</div>
+  </div>
+  <div class="all-grid">`;
+
+  photos.forEach(p => {
+    html += `<div class="all-card">
+      <img class="all-img" src="${escapeHtml(p.image_url)}" alt="">
+      ${p.award_title ? `<div class="all-award-tag">🎖 ${escapeHtml(p.award_title)}</div>` : ''}
+      <div class="all-meta">${showAuthor ? escapeHtml(p.nickname) : ''}</div>
+      <div class="all-likes">❤ ${p.like_count || 0}</div>
+    </div>`;
+  });
+  html += `</div><div class="pdf-footer">Photo Contest All Posts Report</div>`;
+
+  buildPrintWindow(`全投稿一覧 - ${state.event.name}`, html);
+});
 </script>
 </body>
 </html>

@@ -66,12 +66,14 @@ body[data-theme="festival"]{
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{
-  height:100%;
+  min-height:100%;
   width:100%;
   max-width:100%;
   overflow-x:hidden;
+  overflow-y:auto;
   touch-action:manipulation;
   -webkit-text-size-adjust:100%;
+  overscroll-behavior-x:none;
 }
 body{
   background:var(--sea);color:var(--ink);
@@ -79,7 +81,6 @@ body{
   -webkit-font-smoothing:antialiased;font-feature-settings:"palt";
   letter-spacing:0.02em;
   overflow-x:hidden;
-  overflow-y:hidden;
   position:relative;
 }
 
@@ -113,8 +114,9 @@ button,input,select,textarea{font-size:16px;max-width:100%}
   word-break:break-word;
 }
 .frame{
-  position:relative;width:100%;height:100dvh;max-width:480px;
-  margin:0 auto;background:var(--sand);overflow:hidden;
+  position:relative;width:100%;min-height:100svh;height:auto;max-width:480px;
+  margin:0 auto;background:var(--sand);
+  overflow-x:hidden;overflow-y:visible;
   display:flex;flex-direction:column;
   isolation:isolate;
 }
@@ -133,6 +135,13 @@ button,input,select,textarea{font-size:16px;max-width:100%}
 }
 .header__name::before{content:'';width:6px;height:6px;background:var(--coral);border-radius:50%}
 
+.bgm-btn{
+  background:var(--foam);color:var(--ink-2);border:1px solid var(--line);
+  border-radius:100px;padding:5px 10px;font-size:11px;font-weight:700;
+  font-family:inherit;cursor:pointer;white-space:nowrap;
+}
+.bgm-btn.on{background:var(--coral);color:white;border-color:var(--coral)}
+
 /* タブ */
 .tabs{display:flex;padding:8px 12px;gap:6px;background:var(--sand);border-bottom:1px solid var(--line)}
 .tab{
@@ -142,14 +151,13 @@ button,input,select,textarea{font-size:16px;max-width:100%}
 }
 .tab.active{background:var(--ink);color:var(--foam)}
 
-/* ビュー（display方式：absolute残像を避けるため） */
-.views{flex:1;position:relative;overflow:hidden;min-width:0}
+/* ビュー：viewはdisplay切替・view-innerにパディング＋safe-area確保 */
+.views{flex:1;position:relative;min-width:0}
 .view{
   display:none;
-  height:100%;
   width:100%;
   max-width:100%;
-  overflow-y:auto;overflow-x:hidden;
+  overflow-x:hidden;
   -webkit-overflow-scrolling:touch;
   padding:0;
   background:transparent;
@@ -158,12 +166,11 @@ button,input,select,textarea{font-size:16px;max-width:100%}
 }
 .view.active{display:block}
 
-/* 内側ラッパー：ここで幅とパディングを完全管理 */
+/* 内側ラッパー：safe-area込みで下部余白確保 */
 .view-inner{
   width:100%;
   max-width:100%;
-  padding:18px 18px 80px;
-  overflow:hidden;
+  padding:18px 18px calc(120px + env(safe-area-inset-bottom));
   background:transparent;
   box-sizing:border-box;
   min-width:0;
@@ -302,12 +309,17 @@ button,input,select,textarea{font-size:16px;max-width:100%}
 /* 詳細モーダル */
 .detail-overlay{
   position:fixed;inset:0;background:rgba(10,31,42,0.92);
-  z-index:100;display:none;align-items:center;justify-content:center;padding:14px;
+  z-index:100;display:none;
+  align-items:flex-start;justify-content:center;
+  padding:calc(14px + env(safe-area-inset-top)) 14px calc(90px + env(safe-area-inset-bottom));
+  overflow-y:auto;-webkit-overflow-scrolling:touch;
 }
 .detail-overlay.show{display:flex}
 .detail{
-  background:var(--sand);width:100%;max-width:440px;max-height:92vh;
-  border-radius:var(--r-lg);overflow-y:auto;display:flex;flex-direction:column;
+  background:var(--sand);width:100%;max-width:440px;
+  max-height:none;
+  border-radius:var(--r-lg);display:flex;flex-direction:column;
+  margin:0 auto;
 }
 .detail__close{
   position:absolute;top:18px;right:18px;width:38px;height:38px;
@@ -366,13 +378,16 @@ button,input,select,textarea{font-size:16px;max-width:100%}
 .name-modal{
   position:fixed;inset:0;background:var(--sea);
   background-image:radial-gradient(circle at 30% 30%,rgba(42,141,181,0.4),transparent 50%);
-  z-index:200;display:flex;align-items:center;justify-content:center;
-  padding:24px;overflow-y:auto;
+  z-index:200;display:flex;
+  align-items:flex-start;justify-content:center;
+  padding:calc(24px + env(safe-area-inset-top)) 24px calc(60px + env(safe-area-inset-bottom));
+  overflow-y:auto;-webkit-overflow-scrolling:touch;
 }
 .name-modal.hidden{display:none}
 .name-card{
   background:var(--sand);border-radius:var(--r-lg);
   padding:28px 22px;width:100%;max-width:380px;
+  margin:auto 0;
 }
 .name-card__title{font-size:20px;font-weight:800;margin-bottom:6px;color:var(--sea)}
 .name-card__sub{font-size:12px;color:var(--ink-3);margin-bottom:18px;line-height:1.6}
@@ -497,6 +512,54 @@ button,input,select,textarea{font-size:16px;max-width:100%}
   border-radius:10px;margin-bottom:8px;
 }
 .result__award-name{font-size:13px;font-weight:700;color:var(--ink-2);text-align:center}
+/* ========================================
+   スライドショー
+   ======================================== */
+.slideshow{
+  position:fixed;inset:0;z-index:9000;
+  display:none;flex-direction:column;
+  background:#000;
+  padding:calc(20px + env(safe-area-inset-top)) 0 calc(20px + env(safe-area-inset-bottom));
+}
+.slideshow.show{display:flex}
+.slideshow__stage{
+  flex:1;display:flex;align-items:center;justify-content:center;
+  flex-direction:column;gap:14px;padding:0 16px;min-height:0;
+}
+.slideshow__img{
+  max-width:100%;max-height:calc(100vh - 200px);
+  object-fit:contain;border-radius:6px;
+  box-shadow:0 10px 40px -10px rgba(0,0,0,0.6);
+}
+.slideshow__caption{
+  color:white;text-align:center;font-size:14px;font-weight:700;
+  min-height:20px;
+}
+.slideshow__caption .award-tag{
+  display:inline-block;background:var(--coral);color:white;
+  font-size:11px;font-weight:800;padding:3px 9px;border-radius:100px;
+  margin-right:6px;
+}
+.slideshow__controls{
+  display:flex;justify-content:center;gap:20px;padding:14px 0;
+}
+.slideshow__btn{
+  width:52px;height:52px;border-radius:50%;
+  background:rgba(255,255,255,0.12);color:white;
+  border:1px solid rgba(255,255,255,0.25);font-size:18px;
+  font-family:inherit;cursor:pointer;
+}
+.slideshow__btn:active{background:rgba(255,255,255,0.25)}
+.slideshow__counter{
+  text-align:center;color:rgba(255,255,255,0.7);
+  font-size:12px;font-weight:600;letter-spacing:0.1em;
+}
+.slideshow__close{
+  position:absolute;top:calc(14px + env(safe-area-inset-top));right:14px;
+  width:40px;height:40px;border-radius:50%;
+  background:rgba(255,255,255,0.15);color:white;border:none;
+  font-size:18px;font-family:inherit;cursor:pointer;
+}
 </style>
 </head>
 <body class="is-initializing" data-theme="aquarium">
@@ -513,8 +576,12 @@ button,input,select,textarea{font-size:16px;max-width:100%}
       <span id="eventTitle">フォトコンテスト</span>
       <small id="eventTheme">PHOTO CONTEST</small>
     </div>
-    <span class="header__name" id="userBadge" style="display:none;"></span>
+    <div style="display:flex;gap:8px;align-items:center">
+      <button class="bgm-btn" id="bgmBtn" type="button" title="BGM ON/OFF">♪ BGM OFF</button>
+      <span class="header__name" id="userBadge" style="display:none;"></span>
+    </div>
   </header>
+  <audio id="bgmAudio" loop preload="none" src="assets/bgm.mp3"></audio>
 
   <!-- タブ -->
   <nav class="tabs">
@@ -573,6 +640,7 @@ button,input,select,textarea{font-size:16px;max-width:100%}
             <li>自分以外の写真には<b>何枚でも</b>いいねできます。</li>
           </ul>
         </div>
+        <button class="btn-primary" id="slideshowBtn" type="button" style="margin-bottom:14px;">📽 スライドショーを見る</button>
         <div class="gallery" id="galleryGrid">
           <div class="gallery__empty" id="galleryEmpty">
             <div class="gallery__empty-icon">📷</div>
@@ -677,6 +745,21 @@ button,input,select,textarea{font-size:16px;max-width:100%}
 
 <div class="toast" id="toast"></div>
 
+<!-- スライドショー -->
+<div class="slideshow" id="slideshow" aria-hidden="true">
+  <div class="slideshow__stage">
+    <img class="slideshow__img" id="slideshowImg" alt="">
+    <div class="slideshow__caption" id="slideshowCaption"></div>
+  </div>
+  <div class="slideshow__controls">
+    <button class="slideshow__btn" id="slideshowPrev" type="button" aria-label="前へ">◀</button>
+    <button class="slideshow__btn" id="slideshowPause" type="button" aria-label="一時停止/再開">⏸</button>
+    <button class="slideshow__btn" id="slideshowNext" type="button" aria-label="次へ">▶</button>
+  </div>
+  <div class="slideshow__counter" id="slideshowCounter">1 / 1</div>
+  <button class="slideshow__close" id="slideshowClose" type="button" aria-label="閉じる">✕</button>
+</div>
+
 <script>
 'use strict';
 
@@ -779,6 +862,123 @@ function showToast(msg, isError = false) {
   showToast._t = setTimeout(() => t.classList.remove('show'), 2800);
 }
 
+// ============================================================
+// BGM（assets/bgm.mp3 を控えめに再生）
+// ============================================================
+const BGM_VOLUME = 0.3;
+let bgmEnabled = false;
+
+function updateBgmBtn() {
+  const btn = $('#bgmBtn');
+  if (!btn) return;
+  btn.textContent = bgmEnabled ? '♪ BGM ON' : '♪ BGM OFF';
+  btn.classList.toggle('on', bgmEnabled);
+}
+
+async function startBgm() {
+  const a = $('#bgmAudio');
+  if (!a) return false;
+  try {
+    a.volume = BGM_VOLUME;
+    await a.play();
+    bgmEnabled = true;
+    updateBgmBtn();
+    return true;
+  } catch (err) {
+    console.warn('BGM再生失敗:', err);
+    bgmEnabled = false;
+    updateBgmBtn();
+    return false;
+  }
+}
+
+function stopBgm() {
+  const a = $('#bgmAudio');
+  if (!a) return;
+  a.pause();
+  bgmEnabled = false;
+  updateBgmBtn();
+}
+
+async function toggleBgm() {
+  if (bgmEnabled) stopBgm();
+  else {
+    const ok = await startBgm();
+    if (!ok) showToast('端末の設定によりBGMを再生できません', true);
+  }
+}
+
+// ============================================================
+// スライドショー
+// ============================================================
+const SLIDESHOW_INTERVAL_MS = 4000;
+const slideshowState = { photos: [], idx: 0, timer: null, paused: false };
+
+function startSlideshow() {
+  const list = (state.photos || []).filter(p => p.status !== 'hidden' && p.status !== 'deleted');
+  if (list.length === 0) {
+    showToast('表示できる写真がありません', true);
+    return;
+  }
+  // ランダム順
+  slideshowState.photos = [...list].sort(() => Math.random() - 0.5);
+  slideshowState.idx = 0;
+  slideshowState.paused = false;
+  $('#slideshow').classList.add('show');
+  $('#slideshow').setAttribute('aria-hidden', 'false');
+  renderSlideshow();
+  startSlideshowTimer();
+}
+
+function renderSlideshow() {
+  const p = slideshowState.photos[slideshowState.idx];
+  if (!p) return;
+  $('#slideshowImg').src = p.image_url;
+  const showAuthor = state.event?.show_author_name !== false;
+  const award = p.award_title ? `<span class="award-tag">🎖 ${escapeHtml(p.award_title)}</span>` : '';
+  const name = showAuthor ? escapeHtml(p.nickname || '') : '';
+  $('#slideshowCaption').innerHTML = award + name;
+  $('#slideshowCounter').textContent = `${slideshowState.idx + 1} / ${slideshowState.photos.length}`;
+  $('#slideshowPause').textContent = slideshowState.paused ? '▶' : '⏸';
+}
+
+function startSlideshowTimer() {
+  stopSlideshowTimer();
+  if (slideshowState.paused) return;
+  slideshowState.timer = setInterval(() => slideshowStep(1), SLIDESHOW_INTERVAL_MS);
+}
+
+function stopSlideshowTimer() {
+  if (slideshowState.timer) { clearInterval(slideshowState.timer); slideshowState.timer = null; }
+}
+
+function slideshowStep(delta) {
+  if (slideshowState.photos.length === 0) return;
+  slideshowState.idx = (slideshowState.idx + delta + slideshowState.photos.length) % slideshowState.photos.length;
+  renderSlideshow();
+  if (!slideshowState.paused) startSlideshowTimer();  // タイマーリセット
+}
+
+function toggleSlideshowPause() {
+  slideshowState.paused = !slideshowState.paused;
+  if (slideshowState.paused) stopSlideshowTimer();
+  else startSlideshowTimer();
+  renderSlideshow();
+}
+
+function closeSlideshow() {
+  stopSlideshowTimer();
+  $('#slideshow').classList.remove('show');
+  $('#slideshow').setAttribute('aria-hidden', 'true');
+}
+
+// ページ離脱・タブ切替でタイマー止める
+window.addEventListener('beforeunload', closeSlideshow);
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) stopSlideshowTimer();
+  else if ($('#slideshow').classList.contains('show') && !slideshowState.paused) startSlideshowTimer();
+});
+
 // いいね演出：ボタン位置からハートが浮かぶ
 function spawnHeartFx(anchorEl) {
   const rect = anchorEl ? anchorEl.getBoundingClientRect() : { left: window.innerWidth/2, top: window.innerHeight/2, width: 0, height: 0 };
@@ -870,6 +1070,15 @@ async function init() {
     documentWidth: document.documentElement.scrollWidth,
     bodyWidth: document.body.scrollWidth,
   });
+  // BGMボタン
+  $('#bgmBtn')?.addEventListener('click', toggleBgm);
+  updateBgmBtn();
+  // スライドショーボタン
+  $('#slideshowBtn')?.addEventListener('click', startSlideshow);
+  $('#slideshowClose')?.addEventListener('click', closeSlideshow);
+  $('#slideshowPrev')?.addEventListener('click', () => slideshowStep(-1));
+  $('#slideshowNext')?.addEventListener('click', () => slideshowStep(1));
+  $('#slideshowPause')?.addEventListener('click', toggleSlideshowPause);
   try {
     state.event = await DB.getEvent(EVENT_ID);
     if (!state.event) {
@@ -1074,6 +1283,8 @@ async function submitNameForm() {
   console.log('[USER SAVED]', { nickname, identifiers });
 
   $('#nameModal').classList.add('hidden');
+  // 「参加する」というユーザー操作経由なのでBGM自動再生制限を回避できる
+  startBgm();
   onUserReady();
 }
 
