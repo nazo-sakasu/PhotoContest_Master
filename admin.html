@@ -935,6 +935,10 @@ async function init() {
       onPhotoChange: () => loadPhotos(),
       onLikeChange: () => loadPhotos(),
       onCommentChange: () => loadPhotos(),
+      onParticipantChange: async () => {
+        await loadParticipantCount();
+        renderStats();
+      },
       onEventChange: async () => {
         state.event = await DB.hostGetEvent(EVENT_ID, HOST_KEY);
         renderHeader();
@@ -947,7 +951,7 @@ async function init() {
 }
 
 async function refreshAll() {
-  await Promise.all([loadPhotos(), loadReports()]);
+  await Promise.all([loadPhotos(), loadReports(), loadParticipantCount()]);
   renderStats();
 }
 
@@ -1225,12 +1229,13 @@ function renderStats() {
   const totalLikes = photos.reduce((s, p) => s + Number(p.like_count || 0), 0);
   const pendingReports = (state.reports || []).filter(r => r.status === 'pending').length;
   const totalReports = (state.reports || []).length;
+  const participantCount = state.participantCount || 0;
 
   $('#statsRow').innerHTML = `
     <div class="stat"><div class="stat__label">PHOTOS</div><div class="stat__value">${active}</div><div class="stat__sub">非表示${hidden}件</div></div>
     <div class="stat"><div class="stat__label">LIKES</div><div class="stat__value">${totalLikes}</div></div>
     <div class="stat"><div class="stat__label">REPORTS</div><div class="stat__value">${pendingReports}</div><div class="stat__sub">未対応 / 全${totalReports}件</div></div>
-    <div class="stat"><div class="stat__label">参加</div><div class="stat__value">${new Set(photos.map(p => p.photo_id.split('_')[0])).size || 0}</div></div>
+    <div class="stat"><div class="stat__label">参加</div><div class="stat__value">${participantCount}</div></div>
   `;
   $('#photosCount').textContent = `${active}件`;
   if (pendingReports > 0) {
@@ -1238,6 +1243,15 @@ function renderStats() {
     $('#reportBadge').textContent = pendingReports;
   } else {
     $('#reportBadge').style.display = 'none';
+  }
+}
+
+async function loadParticipantCount() {
+  try {
+    state.participantCount = await DB.countParticipants(EVENT_ID, HOST_KEY);
+  } catch (err) {
+    console.warn('participant count failed:', err);
+    state.participantCount = 0;
   }
 }
 

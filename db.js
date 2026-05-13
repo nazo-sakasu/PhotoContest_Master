@@ -143,7 +143,7 @@
     return { path, url: data.publicUrl };
   }
 
-  async function submitPhoto({ eventId, userId, nickname, imageUrl, storagePath, identifiers = {} }) {
+  async function submitPhoto({ eventId, userId, userToken, nickname, imageUrl, storagePath, identifiers = {} }) {
     const { data, error } = await sb.rpc('submit_photo', {
       p_event_id: eventId,
       p_user_id: userId,
@@ -153,10 +153,38 @@
       p_registration_number: identifiers.registration_number || null,
       p_phone: identifiers.phone || null,
       p_employee_id: identifiers.employee_id || null,
-      p_email: identifiers.email || null
+      p_email: identifiers.email || null,
+      p_user_token: userToken || userId
     });
     if (error) throw error;
     return data;
+  }
+
+  // 参加者：自分の写真を削除（user_tokenが一致する場合のみ）
+  async function participantDeleteOwnPhoto(eventId, photoId, userToken) {
+    const { data, error } = await sb.rpc('participant_delete_own_photo', {
+      p_event_id: eventId, p_photo_id: photoId, p_user_token: userToken
+    });
+    if (error) throw error;
+    return data;
+  }
+
+  // 参加者登録
+  async function registerParticipant(eventId, clientToken, profile) {
+    const { data, error } = await sb.rpc('register_participant', {
+      p_event_id: eventId, p_client_token: clientToken, p_profile: profile || {}
+    });
+    if (error) throw error;
+    return data;
+  }
+
+  // ホスト：参加者数取得
+  async function countParticipants(eventId, hostKey) {
+    const { data, error } = await sb.rpc('count_participants', {
+      p_event_id: eventId, p_host_key: hostKey
+    });
+    if (error) throw error;
+    return Number(data) || 0;
   }
 
   // ============================================================
@@ -169,9 +197,11 @@
     return (data || []).map(r => r.photo_id);
   }
 
-  async function addLike(eventId, photoId, userId) {
+  async function addLike(eventId, photoId, userId, nickname, userToken) {
     const { data, error } = await sb.rpc('add_like', {
-      p_event_id: eventId, p_photo_id: photoId, p_user_id: userId
+      p_event_id: eventId, p_photo_id: photoId, p_user_id: userId,
+      p_liked_by_nickname: nickname || null,
+      p_liked_by_token: userToken || null
     });
     if (error) throw error;
     return data;
@@ -312,6 +342,8 @@
         (payload) => callbacks.onEventChange && callbacks.onEventChange(payload))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'specials', filter: `event_id=eq.${eventId}` },
         (payload) => callbacks.onSpecialChange && callbacks.onSpecialChange(payload))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'participants', filter: `event_id=eq.${eventId}` },
+        (payload) => callbacks.onParticipantChange && callbacks.onParticipantChange(payload))
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
           if (callbacks.onConnect) callbacks.onConnect();
@@ -342,7 +374,8 @@
     listPhotos, listRankings, countPhotosForUser, hostListPhotosWithIdentifiers,
     hostSetAward,
     // upload + submit
-    uploadImage, submitPhoto,
+    uploadImage, submitPhoto, participantDeleteOwnPhoto,
+    registerParticipant, countParticipants,
     // likes
     getMyLikes, addLike, removeLike,
     // comments

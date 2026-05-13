@@ -560,6 +560,78 @@ button,input,select,textarea{font-size:16px;max-width:100%}
   background:rgba(255,255,255,0.15);color:white;border:none;
   font-size:18px;font-family:inherit;cursor:pointer;
 }
+/* ========================================
+   あなたの投稿写真
+   ======================================== */
+.my-posts{margin-top:24px;padding-top:18px;border-top:1px solid var(--line)}
+.my-posts__title{font-size:14px;font-weight:800;color:var(--ink);margin-bottom:12px}
+.my-posts__list{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.my-post{position:relative;background:var(--sand-2);border-radius:8px;overflow:hidden}
+.my-post img{width:100%;aspect-ratio:1;object-fit:cover;display:block}
+.my-post__info{padding:6px 7px;font-size:10px}
+.my-post__name{font-weight:700;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.my-post__likes{color:var(--ink-3);font-weight:600;margin-top:2px}
+.my-post__del{
+  position:absolute;top:4px;right:4px;
+  background:rgba(255,255,255,0.92);color:var(--coral);
+  border:none;border-radius:100px;
+  font-size:10px;font-weight:800;padding:3px 8px;
+  font-family:inherit;cursor:pointer;
+}
+
+/* ========================================
+   一覧カードのいいねボタン
+   ======================================== */
+.card-like{
+  display:block;width:100%;
+  background:var(--coral);color:white;border:none;
+  border-radius:6px;padding:6px 8px;
+  font-size:11px;font-weight:800;font-family:inherit;
+  cursor:pointer;margin-top:4px;
+}
+.card-like--done{background:var(--ink-3);color:white}
+.card-like--mine{background:var(--sand-2);color:var(--ink-3);cursor:default}
+.card-like:active{transform:scale(0.97)}
+
+/* ========================================
+   ギャラリーツールバー
+   ======================================== */
+.gallery-toolbar{display:flex;justify-content:flex-end;gap:8px;margin-bottom:10px}
+.gallery-toolbar__btn{
+  background:var(--foam);color:var(--ink);border:1px solid var(--line);
+  border-radius:100px;padding:6px 14px;font-size:12px;font-weight:700;
+  font-family:inherit;cursor:pointer;
+}
+.gallery-toolbar__btn.active{background:var(--ink);color:white;border-color:var(--ink)}
+
+/* ========================================
+   スライドショーいいねボタン
+   ======================================== */
+.slideshow__like{
+  background:var(--coral);color:white;border:none;
+  border-radius:100px;padding:10px 24px;
+  font-size:14px;font-weight:800;font-family:inherit;
+  cursor:pointer;margin-top:8px;
+  box-shadow:0 4px 14px rgba(214,90,58,0.4);
+}
+.slideshow__like:disabled{background:rgba(255,255,255,0.2);color:rgba(255,255,255,0.7);box-shadow:none;cursor:default}
+.slideshow__like.liked{background:rgba(255,255,255,0.15);color:white;box-shadow:none}
+
+/* ========================================
+   リアルタイムいいね通知
+   ======================================== */
+.like-toast{
+  position:fixed;top:calc(70px + env(safe-area-inset-top));left:50%;
+  transform:translateX(-50%) translateY(-20px);
+  background:rgba(10,31,42,0.92);color:white;
+  padding:10px 18px;border-radius:100px;
+  font-size:13px;font-weight:700;
+  opacity:0;pointer-events:none;
+  transition:opacity 0.3s,transform 0.3s;
+  z-index:9500;max-width:calc(100% - 40px);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.like-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 </style>
 </head>
 <body class="is-initializing" data-theme="aquarium">
@@ -612,7 +684,7 @@ button,input,select,textarea{font-size:16px;max-width:100%}
 
         <label class="uploader" id="uploaderLabel">
           <div class="uploader__icon">📷</div>
-          <div class="uploader__text">写真を選ぶ</div>
+          <div class="uploader__text">写真を1枚選ぶ</div>
           <div class="uploader__hint">タップしてアップロード</div>
           <input type="file" id="fileInput" accept="image/jpeg,image/jpg,image/png,image/webp">
         </label>
@@ -624,6 +696,12 @@ button,input,select,textarea{font-size:16px;max-width:100%}
         <div class="upload__meta">
           <span>投稿者：<b id="metaName">—</b></span>
           <span>投稿数：<b id="metaCount">0</b> / <span id="metaMax">5</span></span>
+        </div>
+
+        <!-- あなたの投稿写真 -->
+        <div class="my-posts" id="myPostsSection" style="display:none">
+          <h3 class="my-posts__title">あなたの投稿写真</h3>
+          <div class="my-posts__list" id="myPostsList"></div>
         </div>
       </div>
     </section>
@@ -641,6 +719,9 @@ button,input,select,textarea{font-size:16px;max-width:100%}
           </ul>
         </div>
         <button class="btn-primary" id="slideshowBtn" type="button" style="margin-bottom:14px;">📽 スライドショーを見る</button>
+        <div class="gallery-toolbar">
+          <button class="gallery-toolbar__btn" id="shuffleBtn" type="button">🔀 シャッフル</button>
+        </div>
         <div class="gallery" id="galleryGrid">
           <div class="gallery__empty" id="galleryEmpty">
             <div class="gallery__empty-icon">📷</div>
@@ -750,6 +831,7 @@ button,input,select,textarea{font-size:16px;max-width:100%}
   <div class="slideshow__stage">
     <img class="slideshow__img" id="slideshowImg" alt="">
     <div class="slideshow__caption" id="slideshowCaption"></div>
+    <button class="slideshow__like" id="slideshowLikeBtn" type="button">❤ いいね</button>
   </div>
   <div class="slideshow__controls">
     <button class="slideshow__btn" id="slideshowPrev" type="button" aria-label="前へ">◀</button>
@@ -759,6 +841,9 @@ button,input,select,textarea{font-size:16px;max-width:100%}
   <div class="slideshow__counter" id="slideshowCounter">1 / 1</div>
   <button class="slideshow__close" id="slideshowClose" type="button" aria-label="閉じる">✕</button>
 </div>
+
+<!-- リアルタイムいいね通知 -->
+<div class="like-toast" id="likeToast" aria-hidden="true"></div>
 
 <script>
 'use strict';
@@ -780,6 +865,8 @@ if (!EVENT_ID) {
 const state = {
   event: null,
   userId: localStorage.getItem('pc_user_' + EVENT_ID) || ('u_' + Math.random().toString(36).slice(2, 14)),
+  // user_token：イベント横断で同一端末を識別するためのトークン（参加者削除権限の判定用）
+  userToken: localStorage.getItem('pc_token_global') || ('t_' + Math.random().toString(36).slice(2, 14) + Date.now().toString(36)),
   nickname: localStorage.getItem('pc_nick_' + EVENT_ID) || '',
   identifiers: (() => {
     try { return JSON.parse(localStorage.getItem('pc_ids_' + EVENT_ID) || '{}'); }
@@ -798,6 +885,22 @@ const state = {
   uploading: false,
 };
 localStorage.setItem('pc_user_' + EVENT_ID, state.userId);
+localStorage.setItem('pc_token_global', state.userToken);
+
+// 自分が投稿した photo_id 一覧
+function getMyPostedPhotoIds() {
+  try { return JSON.parse(localStorage.getItem('pc_posted_' + EVENT_ID) || '[]'); }
+  catch { return []; }
+}
+function addMyPostedPhotoId(photoId) {
+  const ids = getMyPostedPhotoIds();
+  if (!ids.includes(photoId)) ids.push(photoId);
+  localStorage.setItem('pc_posted_' + EVENT_ID, JSON.stringify(ids));
+}
+function removeMyPostedPhotoId(photoId) {
+  const ids = getMyPostedPhotoIds().filter(id => id !== photoId);
+  localStorage.setItem('pc_posted_' + EVENT_ID, JSON.stringify(ids));
+}
 
 // ============================================================
 // 参加情報ヘルパー
@@ -939,11 +1042,35 @@ function renderSlideshow() {
   if (!p) return;
   $('#slideshowImg').src = p.image_url;
   const showAuthor = state.event?.show_author_name !== false;
-  const award = p.award_title ? `<span class="award-tag">🎖 ${escapeHtml(p.award_title)}</span>` : '';
+  // 結果公開前は賞名を出さない（ネタバレ防止）
+  const showAward = isResultsPublic() && p.award_title;
+  const award = showAward ? `<span class="award-tag">🎖 ${escapeHtml(p.award_title)}</span>` : '';
   const name = showAuthor ? escapeHtml(p.nickname || '') : '';
   $('#slideshowCaption').innerHTML = award + name;
   $('#slideshowCounter').textContent = `${slideshowState.idx + 1} / ${slideshowState.photos.length}`;
   $('#slideshowPause').textContent = slideshowState.paused ? '▶' : '⏸';
+
+  // いいねボタン状態更新
+  const likeBtn = $('#slideshowLikeBtn');
+  if (likeBtn) {
+    const isMine = getMyPostedPhotoIds().includes(p.photo_id);
+    const liked = state.myLikes.has(p.photo_id);
+    const showLikeCount = state.event?.show_like_count !== false;
+    likeBtn.dataset.photoId = p.photo_id;
+    if (isMine) {
+      likeBtn.textContent = '自分の写真';
+      likeBtn.disabled = true;
+      likeBtn.classList.remove('liked');
+    } else if (liked) {
+      likeBtn.textContent = `❤ いいね済み${showLikeCount ? ` (${p.like_count || 0})` : ''}`;
+      likeBtn.disabled = false;
+      likeBtn.classList.add('liked');
+    } else {
+      likeBtn.textContent = `❤ いいね${showLikeCount ? ` (${p.like_count || 0})` : ''}`;
+      likeBtn.disabled = false;
+      likeBtn.classList.remove('liked');
+    }
+  }
 }
 
 function startSlideshowTimer() {
@@ -1083,6 +1210,17 @@ async function init() {
   $('#slideshowPrev')?.addEventListener('click', () => slideshowStep(-1));
   $('#slideshowNext')?.addEventListener('click', () => slideshowStep(1));
   $('#slideshowPause')?.addEventListener('click', toggleSlideshowPause);
+  // スライドショー内のいいねボタン
+  $('#slideshowLikeBtn')?.addEventListener('click', async () => {
+    const btn = $('#slideshowLikeBtn');
+    const pid = btn.dataset.photoId;
+    if (!pid) return;
+    await handleLikePhoto(pid, btn);
+    // スライドショーカードを再描画（数値更新）
+    renderSlideshow();
+  });
+  // シャッフルボタン
+  setupShuffleButton();
   try {
     state.event = await DB.getEvent(EVENT_ID);
     if (!state.event) {
@@ -1134,7 +1272,19 @@ async function init() {
     // Realtime購読
     DB.subscribeEvent(EVENT_ID, {
       onPhotoChange: () => loadPhotos(),
-      onLikeChange: () => { loadPhotos(); loadLikes(); },
+      onLikeChange: (payload) => {
+        loadPhotos();
+        loadLikes();
+        // INSERT イベントで他端末のいいねを通知
+        if (payload?.eventType === 'INSERT' && payload?.new) {
+          const newUserId = payload.new.user_id;
+          // 自分のいいねは handleLikePhoto 側で既に通知済みなのでスキップ
+          if (newUserId && newUserId !== state.userId) {
+            const nickname = payload.new.liked_by_nickname || '誰か';
+            showLikeNotification(nickname);
+          }
+        }
+      },
       onCommentChange: () => loadComments(),
       onEventChange: async () => {
         state.event = await DB.getEvent(EVENT_ID);
@@ -1289,7 +1439,23 @@ async function submitNameForm() {
   $('#nameModal').classList.add('hidden');
   // 「参加する」というユーザー操作経由なのでBGM自動再生制限を回避できる
   startBgm();
+  // 参加者登録（同一端末では重複しないupsert）
+  registerParticipantNow();
   onUserReady();
+}
+
+async function registerParticipantNow() {
+  try {
+    await DB.registerParticipant(EVENT_ID, state.userToken, {
+      nickname: state.nickname,
+      registration_number: state.identifiers?.registration_number || null,
+      phone: state.identifiers?.phone || null,
+      employee_id: state.identifiers?.employee_id || null,
+      email: state.identifiers?.email || null,
+    });
+  } catch (err) {
+    console.warn('participant register failed:', err);
+  }
 }
 
 function onUserReady() {
@@ -1338,6 +1504,7 @@ async function loadPhotos() {
     $('#metaCount').textContent = state.uploadedCount;
     renderGallery();
     renderResult();
+    renderMyPosts();
   } catch (err) {
     console.error('loadPhotos:', err);
   }
@@ -1376,8 +1543,12 @@ function switchTab(name) {
 // 投稿
 // ============================================================
 $('#fileInput').addEventListener('change', async (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
+  const files = e.target.files;
+  if (!files || files.length === 0) return;
+  if (files.length > 1) {
+    showToast('写真は1枚ずつ投稿してください', true);
+  }
+  const file = files[0];
 
   // 形式チェック
   const allowed = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
@@ -1457,6 +1628,7 @@ $('#submitBtn').addEventListener('click', async () => {
       photoId = await DB.submitPhoto({
         eventId: EVENT_ID,
         userId: state.userId,
+        userToken: state.userToken,
         nickname: state.nickname,
         imageUrl: url,
         storagePath: path,
@@ -1480,6 +1652,7 @@ $('#submitBtn').addEventListener('click', async () => {
     showSubmitFx();
     clearPreview();
     await loadPhotos();
+    renderMyPosts();
   } catch (err) {
     console.error(err);
     const m = err.message || '';
@@ -1519,6 +1692,10 @@ async function compressImage(file, maxW, quality) {
 // ============================================================
 // ギャラリー描画
 // ============================================================
+// シャッフル状態
+let galleryShuffled = false;
+let galleryShuffleOrder = [];
+
 function renderGallery() {
   const grid = $('#galleryGrid');
   if (!state.photos || state.photos.length === 0) {
@@ -1526,19 +1703,50 @@ function renderGallery() {
     return;
   }
   const showAuthor = state.event.show_author_name !== false;
-  grid.innerHTML = state.photos.map(p => `
+  const showLikeCount = state.event.show_like_count !== false;
+  const myPostedIds = getMyPostedPhotoIds();
+
+  // シャッフル順
+  let displayList = state.photos;
+  if (galleryShuffled) {
+    // 既存シャッフル順を維持（写真が追加された場合のみ末尾に追加）
+    const seen = new Set(galleryShuffleOrder);
+    galleryShuffleOrder = galleryShuffleOrder.filter(id => state.photos.some(p => p.photo_id === id));
+    state.photos.forEach(p => { if (!seen.has(p.photo_id)) galleryShuffleOrder.push(p.photo_id); });
+    const map = new Map(state.photos.map(p => [p.photo_id, p]));
+    displayList = galleryShuffleOrder.map(id => map.get(id)).filter(Boolean);
+  }
+
+  grid.innerHTML = displayList.map(p => {
+    const liked = state.myLikes.has(p.photo_id);
+    const isMine = myPostedIds.includes(p.photo_id);
+    const likeBtnHtml = isMine
+      ? `<button class="card-like card-like--mine" disabled>自分の写真</button>`
+      : liked
+      ? `<button class="card-like card-like--done" data-like-id="${escapeHtml(p.photo_id)}">❤ 済み${showLikeCount ? ` ${p.like_count || 0}` : ''}</button>`
+      : `<button class="card-like" data-like-id="${escapeHtml(p.photo_id)}">❤ いいね${showLikeCount ? ` ${p.like_count || 0}` : ''}</button>`;
+    return `
     <div class="photo-card" data-id="${p.photo_id}">
       <img src="${escapeHtml(p.image_url)}" alt="">
       <div class="photo-card__info">
         ${showAuthor ? `<div class="photo-card__name">${escapeHtml(p.nickname)}</div>` : '<div class="photo-card__name">　</div>'}
-        ${state.event.show_like_count !== false
-          ? `<div class="photo-card__likes">❤ ${p.like_count || 0}</div>`
-          : ''}
+        ${likeBtnHtml}
       </div>
     </div>
-  `).join('');
+  `;}).join('');
   grid.querySelectorAll('.photo-card').forEach(card => {
-    card.addEventListener('click', () => openDetail(card.dataset.id));
+    card.addEventListener('click', (e) => {
+      // いいねボタンクリックは伝播させない
+      if (e.target.closest('.card-like')) return;
+      openDetail(card.dataset.id);
+    });
+  });
+  grid.querySelectorAll('.card-like[data-like-id]').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const pid = btn.dataset.likeId;
+      await handleLikePhoto(pid, btn);
+    });
   });
 }
 
@@ -1712,36 +1920,130 @@ $('#detailClose').addEventListener('click', () => {
 
 $('#detailLike').addEventListener('click', async () => {
   if (!state.detailPhoto) return;
-  const photoId = state.detailPhoto.photo_id;
   const btn = $('#detailLike');
-  btn.disabled = true;
+  await handleLikePhoto(state.detailPhoto.photo_id, btn);
+  // 詳細モーダル用にラベル更新
+  const liked = state.myLikes.has(state.detailPhoto.photo_id);
+  btn.textContent = liked ? '✓ いいね済み（取消）' : '❤ いいねする';
+  btn.classList.toggle('liked', liked);
+});
+
+// ============================================================
+// 共通いいね処理（一覧／詳細／スライドショーから呼ばれる）
+// ============================================================
+async function handleLikePhoto(photoId, anchorBtn) {
+  // 自分の写真チェック
+  if (getMyPostedPhotoIds().includes(photoId)) {
+    showToast('自分の写真にはいいねできません', true);
+    return;
+  }
+  if (anchorBtn) anchorBtn.disabled = true;
   try {
     if (state.myLikes.has(photoId)) {
+      // いいね取消
       await DB.removeLike(EVENT_ID, photoId, state.userId);
       state.myLikes.delete(photoId);
-      btn.textContent = '❤ いいねする';
-      btn.classList.remove('liked');
-      btn.disabled = false;
     } else {
-      const result = await DB.addLike(EVENT_ID, photoId, state.userId);
+      const result = await DB.addLike(EVENT_ID, photoId, state.userId, state.nickname, state.userToken);
       if (result === false) {
         showToast('すでにいいね済みです');
       } else {
-        showToast('いいねしました ❤');
-        spawnHeartFx(btn);  // ミニ演出
+        spawnHeartFx(anchorBtn);
+        // 自分のいいねでも通知（イベント感）
+        showLikeNotification(state.nickname || 'あなた');
       }
       state.myLikes.add(photoId);
-      btn.textContent = '✓ いいね済み（取消）';
-      btn.classList.add('liked');
-      btn.disabled = false;
     }
     await loadPhotos();
   } catch (err) {
     console.error(err);
     showToast(errMsg(err), true);
-    btn.disabled = false;
+  } finally {
+    if (anchorBtn) anchorBtn.disabled = false;
   }
-});
+}
+
+// ============================================================
+// あなたの投稿写真
+// ============================================================
+function renderMyPosts() {
+  const ids = getMyPostedPhotoIds();
+  const section = $('#myPostsSection');
+  const list = $('#myPostsList');
+  if (!ids.length || !state.photos) {
+    section.style.display = 'none';
+    return;
+  }
+  // photos から自分の投稿だけ取り出す
+  const map = new Map(state.photos.map(p => [p.photo_id, p]));
+  const myPhotos = ids.map(id => map.get(id)).filter(Boolean);
+  if (myPhotos.length === 0) {
+    section.style.display = 'none';
+    return;
+  }
+  section.style.display = 'block';
+  list.innerHTML = myPhotos.map(p => `
+    <div class="my-post" data-id="${escapeHtml(p.photo_id)}">
+      <img src="${escapeHtml(p.image_url)}" alt="">
+      <button class="my-post__del" data-del-id="${escapeHtml(p.photo_id)}">削除</button>
+      <div class="my-post__info">
+        <div class="my-post__name">${escapeHtml(p.nickname || '')}</div>
+        <div class="my-post__likes">❤ ${p.like_count || 0}</div>
+      </div>
+    </div>
+  `).join('');
+  list.querySelectorAll('[data-del-id]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const pid = btn.dataset.delId;
+      if (!confirm('この写真を削除しますか？\n削除すると、みんなの写真・結果・スライドショーから消えます。')) return;
+      try {
+        await DB.participantDeleteOwnPhoto(EVENT_ID, pid, state.userToken);
+        removeMyPostedPhotoId(pid);
+        showToast('削除しました');
+        await loadPhotos();
+        renderMyPosts();
+      } catch (err) {
+        console.error(err);
+        showToast('削除に失敗しました: ' + (err.message || ''), true);
+      }
+    });
+  });
+}
+
+// ============================================================
+// リアルタイムいいね通知
+// ============================================================
+function showLikeNotification(nickname) {
+  const t = $('#likeToast');
+  if (!t) return;
+  t.textContent = `${nickname}さんがいいねしました！`;
+  t.classList.add('show');
+  clearTimeout(showLikeNotification._t);
+  showLikeNotification._t = setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ============================================================
+// シャッフルボタン
+// ============================================================
+function setupShuffleButton() {
+  const btn = $('#shuffleBtn');
+  if (!btn || btn.dataset.bound) return;
+  btn.dataset.bound = '1';
+  btn.addEventListener('click', () => {
+    if (galleryShuffled) {
+      galleryShuffled = false;
+      galleryShuffleOrder = [];
+      btn.textContent = '🔀 シャッフル';
+      btn.classList.remove('active');
+    } else {
+      galleryShuffled = true;
+      galleryShuffleOrder = [...state.photos].sort(() => Math.random() - 0.5).map(p => p.photo_id);
+      btn.textContent = '新着順に戻す';
+      btn.classList.add('active');
+    }
+    renderGallery();
+  });
+}
 
 $('#detailReport').addEventListener('click', async () => {
   if (!state.detailPhoto) return;
