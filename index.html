@@ -331,11 +331,8 @@ button,input,select,textarea{font-size:16px;max-width:100%}
 .detail__name{font-size:15px;font-weight:800;margin-bottom:6px}
 .detail__action-row{display:flex;gap:8px;margin-top:14px}
 .detail__like{
-  flex:1;padding:12px;background:var(--coral);color:white;
-  border:none;border-radius:var(--r);font-weight:700;font-size:13px;cursor:pointer;
+  flex:1;font-family:inherit;font-size:13px;cursor:pointer;
 }
-.detail__like.liked{background:var(--ink-3);cursor:default}
-.detail__like:disabled{background:var(--sand-2);color:var(--ink-3);cursor:not-allowed}
 .detail__report{
   background:transparent;border:1px solid var(--line);padding:10px 14px;
   border-radius:var(--r);color:var(--ink-3);font-weight:600;font-size:12px;cursor:pointer;
@@ -587,16 +584,115 @@ button,input,select,textarea{font-size:16px;max-width:100%}
 /* ========================================
    一覧カードのいいねボタン
    ======================================== */
-.card-like{
-  display:block;width:100%;
-  background:var(--coral);color:white;border:none;
-  border-radius:0;padding:8px 8px;
-  font-size:11px;font-weight:800;font-family:inherit;
-  cursor:pointer;margin:0;
+/* ========================================
+   ハートいいねボタン（共通）
+   variant: card / detail / slideshow
+   ======================================== */
+.like-heart{
+  display:inline-flex;align-items:center;gap:6px;
+  background:transparent;border:none;cursor:pointer;
+  font-family:inherit;font-weight:700;
+  padding:0;margin:0;
+  color:inherit;
+  -webkit-tap-highlight-color:transparent;
 }
-.card-like--done{background:var(--ink-3);color:white}
-.card-like--mine{background:var(--sand-2);color:var(--ink-3);cursor:default}
-.card-like:active:not(:disabled){transform:scale(0.97)}
+.like-heart:disabled,.like-heart.mine{cursor:default}
+.like-heart__icon{
+  display:inline-block;font-size:22px;line-height:1;
+  color:rgba(0,0,0,0.45);
+  transition:color 0.15s;
+}
+.like-heart.liked .like-heart__icon{color:#e63946}
+.like-heart.mine .like-heart__icon{color:rgba(0,0,0,0.25)}
+.like-heart__label{font-size:12px;font-weight:700}
+.like-heart__count{font-size:12px;font-weight:700;color:var(--ink-2)}
+
+/* パルスアニメ */
+.like-pulse{animation:likePulse 0.28s ease}
+@keyframes likePulse{
+  0%{transform:scale(1)}
+  45%{transform:scale(1.32)}
+  100%{transform:scale(1)}
+}
+
+/* --- 一覧カード版：写真右下にフローティング（黒背景＋白ハート、写真色を選ばない） --- */
+.photo-card__media{position:relative}
+.like-heart--card{
+  position:absolute;right:8px;bottom:8px;
+  width:42px;height:42px;
+  background:rgba(0,0,0,0.55);
+  border-radius:50%;
+  justify-content:center;
+  box-shadow:0 2px 10px rgba(0,0,0,0.35);
+  backdrop-filter:blur(6px);
+  -webkit-backdrop-filter:blur(6px);
+}
+.like-heart--card .like-heart__icon{
+  font-size:22px;color:rgba(255,255,255,0.95);
+  text-shadow:0 1px 2px rgba(0,0,0,0.4);
+}
+.like-heart--card.liked .like-heart__icon{
+  color:#ff5a6e;
+  text-shadow:0 1px 4px rgba(255,90,110,0.5);
+}
+.like-heart--card .like-heart__count{
+  margin-left:0;background:transparent;color:white;
+  padding:0;border-radius:0;font-size:12px;font-weight:800;
+  text-shadow:0 1px 2px rgba(0,0,0,0.6);
+  position:static;transform:none;
+}
+/* いいね数表示時は丸ではなく横長ピル型に */
+.like-heart--card.has-count{
+  width:auto;height:auto;border-radius:100px;
+  padding:6px 12px 6px 10px;gap:5px;
+  justify-content:flex-start;
+}
+.like-heart--card.mine{
+  background:rgba(0,0,0,0.45);
+  font-size:10px;font-weight:700;width:auto;height:auto;
+  padding:6px 12px;border-radius:100px;color:white;
+}
+.like-heart--card.mine .like-heart__icon{display:none}
+.like-heart--card.mine::before{content:'自分の写真';font-size:10px;color:rgba(255,255,255,0.85)}
+.like-heart--card:active:not(:disabled){transform:scale(0.92)}
+
+/* --- 詳細モーダル版：白枠ボタン --- */
+.like-heart--detail{
+  width:100%;padding:12px 16px;
+  background:transparent;
+  border:1.5px solid var(--line);
+  border-radius:8px;
+  justify-content:center;gap:10px;
+}
+.like-heart--detail.liked{
+  background:#fff5f5;border-color:#ffcdd2;
+}
+.like-heart--detail.mine{
+  background:var(--sand-2);border-color:var(--line);
+  color:var(--ink-3);
+}
+.like-heart--detail .like-heart__icon{font-size:24px}
+.like-heart--detail .like-heart__label{font-size:14px}
+.like-heart--detail .like-heart__count{font-size:14px}
+
+/* --- スライドショー版：暗背景でも見えるよう薄半透明 --- */
+.like-heart--slideshow{
+  padding:10px 22px;border-radius:100px;
+  background:rgba(255,255,255,0.12);
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  box-shadow:0 2px 12px rgba(0,0,0,0.3);
+}
+.like-heart--slideshow .like-heart__icon{
+  font-size:24px;color:rgba(255,255,255,0.85);
+  text-shadow:0 1px 3px rgba(0,0,0,0.4);
+}
+.like-heart--slideshow.liked .like-heart__icon{color:#ff5a6e}
+.like-heart--slideshow .like-heart__count,
+.like-heart--slideshow .like-heart__label{
+  color:white;font-size:14px;text-shadow:0 1px 3px rgba(0,0,0,0.4);
+}
+.like-heart--slideshow.mine{background:rgba(255,255,255,0.06)}
+.like-heart--slideshow.mine .like-heart__icon{color:rgba(255,255,255,0.4)}
 
 /* 投稿未完了の注意文 */
 .submit-warn{
@@ -623,15 +719,12 @@ button,input,select,textarea{font-size:16px;max-width:100%}
 /* ========================================
    スライドショーいいねボタン
    ======================================== */
+/* スライドショーのいいねは .like-heart--slideshow で管理（旧スタイルは無効化） */
 .slideshow__like{
-  background:var(--coral);color:white;border:none;
-  border-radius:100px;padding:10px 24px;
-  font-size:14px;font-weight:800;font-family:inherit;
-  cursor:pointer;margin:0;
-  box-shadow:0 4px 14px rgba(214,90,58,0.4);
+  background:transparent;border:none;cursor:pointer;
+  font-family:inherit;margin:0;
 }
-.slideshow__like:disabled{background:rgba(255,255,255,0.2);color:rgba(255,255,255,0.7);box-shadow:none;cursor:default}
-.slideshow__like.liked{background:rgba(255,255,255,0.15);color:white;box-shadow:none}
+.slideshow__like:disabled{cursor:default}
 
 /* ========================================
    リアルタイムいいね通知
@@ -1074,26 +1167,23 @@ function renderSlideshow() {
   $('#slideshowCounter').textContent = `${slideshowState.idx + 1} / ${slideshowState.photos.length}`;
   $('#slideshowPause').textContent = slideshowState.paused ? '▶' : '⏸';
 
-  // いいねボタン状態更新
+  // いいねボタン状態更新（ハート主体UI）
   const likeBtn = $('#slideshowLikeBtn');
   if (likeBtn) {
     const isMine = getMyPostedPhotoIds().includes(p.photo_id);
     const liked = state.myLikes.has(p.photo_id);
     const showLikeCount = state.event?.show_like_count !== false;
     likeBtn.dataset.photoId = p.photo_id;
-    if (isMine) {
-      likeBtn.textContent = '自分の写真';
-      likeBtn.disabled = true;
-      likeBtn.classList.remove('liked');
-    } else if (liked) {
-      likeBtn.textContent = `❤ いいね済み${showLikeCount ? ` (${p.like_count || 0})` : ''}`;
-      likeBtn.disabled = false;
-      likeBtn.classList.add('liked');
-    } else {
-      likeBtn.textContent = `❤ いいね${showLikeCount ? ` (${p.like_count || 0})` : ''}`;
-      likeBtn.disabled = false;
-      likeBtn.classList.remove('liked');
-    }
+    const clsList = ['slideshow__like', 'like-heart', 'like-heart--slideshow'];
+    if (liked) clsList.push('liked');
+    if (isMine) clsList.push('mine');
+    if (showLikeCount && !isMine) clsList.push('has-count');
+    likeBtn.className = clsList.join(' ');
+    likeBtn.disabled = isMine;
+    const heart = liked ? '❤' : '♡';
+    const count = (showLikeCount && !isMine) ? `<span class="like-heart__count">${p.like_count || 0}</span>` : '';
+    const label = isMine ? '<span class="like-heart__label">自分の写真</span>' : '';
+    likeBtn.innerHTML = `<span class="like-heart__icon">${heart}</span>${label}${count}`;
   }
 }
 
@@ -1744,17 +1834,13 @@ function renderGallery() {
   }
 
   grid.innerHTML = displayList.map(p => {
-    const liked = state.myLikes.has(p.photo_id);
-    const isMine = myPostedIds.includes(p.photo_id);
-    const likeBtnHtml = isMine
-      ? `<button class="card-like card-like--mine" disabled>自分の写真</button>`
-      : liked
-      ? `<button class="card-like card-like--done" data-like-id="${escapeHtml(p.photo_id)}">❤ 済み${showLikeCount ? ` ${p.like_count || 0}` : ''}</button>`
-      : `<button class="card-like" data-like-id="${escapeHtml(p.photo_id)}">❤ いいね${showLikeCount ? ` ${p.like_count || 0}` : ''}</button>`;
+    const likeBtn = buildLikeButtonHtml({ photoId: p.photo_id, likeCount: p.like_count, variant: 'card' });
     return `
     <div class="photo-card" data-id="${p.photo_id}">
-      <img src="${escapeHtml(p.image_url)}" alt="">
-      ${likeBtnHtml}
+      <div class="photo-card__media">
+        <img src="${escapeHtml(p.image_url)}" alt="">
+        ${likeBtn}
+      </div>
       <div class="photo-card__info">
         ${showAuthor ? `<div class="photo-card__name">${escapeHtml(p.nickname)}</div>` : '<div class="photo-card__name">　</div>'}
       </div>
@@ -1763,11 +1849,11 @@ function renderGallery() {
   grid.querySelectorAll('.photo-card').forEach(card => {
     card.addEventListener('click', (e) => {
       // いいねボタンクリックは伝播させない
-      if (e.target.closest('.card-like')) return;
+      if (e.target.closest('.like-heart')) return;
       openDetail(card.dataset.id);
     });
   });
-  grid.querySelectorAll('.card-like[data-like-id]').forEach(btn => {
+  grid.querySelectorAll('.like-heart[data-like-id]').forEach(btn => {
     btn.addEventListener('click', async (e) => {
       e.stopPropagation();
       const pid = btn.dataset.likeId;
@@ -1890,22 +1976,22 @@ function openDetail(photoId) {
   $('#detailName').textContent = showAuthor ? photo.nickname : '';
   $('#detailName').style.display = showAuthor ? '' : 'none';
 
-  // いいねボタン
+  // いいねボタン（共通ハートUI）
   const isMyPhoto = isMyPostedPhoto(photoId);
   const isLiked = state.myLikes.has(photoId);
   const likeBtn = $('#detailLike');
-  if (isMyPhoto) {
-    likeBtn.disabled = true;
-    likeBtn.textContent = '自分の写真';
-  } else if (isLiked) {
-    likeBtn.disabled = false;
-    likeBtn.textContent = '✓ いいね済み（取消）';
-    likeBtn.classList.add('liked');
-  } else {
-    likeBtn.disabled = false;
-    likeBtn.textContent = '❤ いいねする';
-    likeBtn.classList.remove('liked');
-  }
+  const showCount = state.event?.show_like_count !== false;
+  // クラスとinnerHTMLを直接構築（既存button要素＆リスナー維持のため）
+  const clsList = ['detail__like', 'like-heart', 'like-heart--detail'];
+  if (isLiked) clsList.push('liked');
+  if (isMyPhoto) clsList.push('mine');
+  if (showCount && !isMyPhoto) clsList.push('has-count');
+  likeBtn.className = clsList.join(' ');
+  likeBtn.disabled = isMyPhoto;
+  const heart = isLiked ? '❤' : '♡';
+  const label = isMyPhoto ? '自分の写真' : (isLiked ? 'いいね済み' : 'いいね');
+  const count = (showCount && !isMyPhoto) ? `<span class="like-heart__count">${photo.like_count || 0}</span>` : '';
+  likeBtn.innerHTML = `<span class="like-heart__icon">${heart}</span><span class="like-heart__label">${label}</span>${count}`;
 
   // コメント
   if (state.event.enable_comments) {
@@ -1948,15 +2034,50 @@ $('#detailLike').addEventListener('click', async () => {
   if (!state.detailPhoto) return;
   const btn = $('#detailLike');
   await handleLikePhoto(state.detailPhoto.photo_id, btn);
-  // 詳細モーダル用にラベル更新
-  const liked = state.myLikes.has(state.detailPhoto.photo_id);
-  btn.textContent = liked ? '✓ いいね済み（取消）' : '❤ いいねする';
+  // 詳細モーダル用にハート表示を再構築（loadPhotos後の state.detailPhoto を再参照）
+  const photo = state.detailPhoto;
+  const liked = state.myLikes.has(photo.photo_id);
+  const showCount = state.event?.show_like_count !== false;
+  // 最新のlike_countをstate.photosから取得
+  const fresh = (state.photos || []).find(p => p.photo_id === photo.photo_id);
+  const cnt = fresh ? fresh.like_count : photo.like_count;
   btn.classList.toggle('liked', liked);
+  btn.classList.toggle('has-count', showCount);
+  const heart = liked ? '❤' : '♡';
+  const label = liked ? 'いいね済み' : 'いいね';
+  const countHtml = showCount ? `<span class="like-heart__count">${cnt || 0}</span>` : '';
+  btn.innerHTML = `<span class="like-heart__icon">${heart}</span><span class="like-heart__label">${label}</span>${countHtml}`;
 });
 
 // ============================================================
 // 共通いいね処理（一覧／詳細／スライドショーから呼ばれる）
 // ============================================================
+// ============================================================
+// いいねUIヘルパー（一覧／詳細／スライドショーで共用）
+// ============================================================
+function buildLikeButtonHtml({ photoId, likeCount, variant }) {
+  // variant: 'card' | 'detail' | 'slideshow'
+  const liked = state.myLikes.has(photoId);
+  const isMine = getMyPostedPhotoIds().includes(photoId);
+  const showCount = state.event?.show_like_count !== false;
+  const cls = ['like-heart', `like-heart--${variant}`];
+  if (liked) cls.push('liked');
+  if (isMine) cls.push('mine');
+  if (showCount && !isMine) cls.push('has-count');
+  const heart = liked ? '❤' : '♡';
+  let label = '';
+  if (isMine) {
+    label = '<span class="like-heart__label">自分の写真</span>';
+  } else if (variant === 'detail') {
+    label = `<span class="like-heart__label">${liked ? 'いいね済み' : 'いいね'}</span>`;
+  }
+  const count = showCount && !isMine ? `<span class="like-heart__count">${likeCount || 0}</span>` : '';
+  const disabledAttr = isMine ? 'disabled' : `data-like-id="${escapeHtml(photoId)}"`;
+  return `<button type="button" class="${cls.join(' ')}" ${disabledAttr}>
+    <span class="like-heart__icon">${heart}</span>${label}${count}
+  </button>`;
+}
+
 async function handleLikePhoto(photoId, anchorBtn) {
   // 自分の写真チェック
   if (getMyPostedPhotoIds().includes(photoId)) {
@@ -1975,6 +2096,14 @@ async function handleLikePhoto(photoId, anchorBtn) {
         showToast('すでにいいね済みです');
       } else {
         spawnHeartFx(anchorBtn);
+        // ハートをポンと拡大するパルスアニメ
+        if (anchorBtn) {
+          const iconEl = anchorBtn.querySelector('.like-heart__icon') || anchorBtn;
+          iconEl.classList.remove('like-pulse');
+          // reflow強制で再アニメ
+          void iconEl.offsetWidth;
+          iconEl.classList.add('like-pulse');
+        }
         // 自分のいいねでも通知（イベント感）
         showLikeNotification(state.nickname || 'あなた');
       }
